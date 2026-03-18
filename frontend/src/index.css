@@ -1,0 +1,268 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Cairo:wght@400;600;700;900&display=swap');
+
+/* Tailwind directives (single set) */
+/* stylelint-disable */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+/* stylelint-enable */
+
+@layer base {
+  body {
+    background-color: #ffffff;
+    color: #1f2937; /* gray-900 */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    transition: background-color 0.2s, color 0.2s;
+    transition-duration: 200ms;
+    font-family: 'Outfit', 'Inter', ui-sans-serif, system-ui;
+  }
+
+  /* Dark mode */
+  .dark body, body.dark {
+    background-color: #030712 !important;
+    color: #f3f4f6; /* gray-100 */
+  }
+
+  /* Sepia mode */
+  .sepia body, body.sepia {
+    background-color: #f4ecd8 !important;
+    color: #5b4636;
+  }
+
+  /* Reader Theme Wrappers */
+  .reader-theme-light { background-color: #ffffff !important; }
+  .reader-theme-sepia { background-color: #F4ECD8 !important; }
+  .reader-theme-dark  { background-color: #0F1115 !important; }
+
+  /* RTL Support */
+  [dir="rtl"] body {
+    font-family: 'Cairo', 'Inter', ui-sans-serif, system-ui;
+    text-align: right;
+  }
+
+  #root {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    text-align: inherit;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  .font-arabic {
+    font-family: 'Cairo', sans-serif !important;
+  }
+}
+
+/* Custom classes for theme transitions */
+.theme-transition {
+  transition: all 0.3s ease-in-out;
+}
+
+/* Global Smooth Theme Switch */
+.theme-transition {
+  transition: background-color 0.4s ease, border-color 0.4s ease, color 0.4s ease, box-shadow 0.4s ease;
+}
+
+/* React Reader Custom Styling */
+.ReactReader__Container {
+  font-family: 'Outfit', sans-serif;
+  transition: background-color 0.5s ease;
+}
+
+.ReactReader__Arrow {
+  border-radius: 1.5rem;
+  background-color: rgba(255, 255, 255, 0.4);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  backdrop-filter: blur(12px);
+  color: #6b7280;
+  width: 48px !important;
+  height: 64px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  z-index: 30;
+  opacity: 0;
+}
+
+.ReactReader__Container:hover .ReactReader__Arrow {
+  opacity: 1;
+}
+
+.ReactReader__Arrow:hover {
+  background-color: #ffffff;
+  color: #7c3aed;
+  transform: translateY(-50%) scale(1.05);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+}
+
+.dark .ReactReader__Arrow {
+  background-color: rgba(31, 41, 55, 0.4);
+  color: #9ca3af;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.dark .ReactReader__Arrow:hover {
+  background-color: #1f2937;
+  color: #ffffff;
+}
+
+.sepia .ReactReader__Arrow {
+  background-color: rgba(91, 70, 54, 0.05);
+  color: #5b4636;
+  border-color: rgba(91, 70, 54, 0.1);
+}
+
+.sepia .ReactReader__Arrow:hover {
+  background-color: #5b4636;
+  color: #f4ecd8;
+}
+
+.ReactReader__Toc {
+  width: 24rem;
+  max-width: 100%;
+  box-shadow: 20px 0 60px rgba(0, 0, 0, 0.05);
+  transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  border-right: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.dark .ReactReader__Toc,
+.dark .ReactReader__TocArea,
+.dark [class*="Toc"],
+.dark [class*="toc"] {
+  background-color: #0F1115 !important;
+  color: #f3f4f6 !important;
+}
+
+.sepia .ReactReader__Toc,
+.sepia .ReactReader__TocArea,
+.sepia [class*="Toc"],
+.sepia [class*="toc"] {
+  background-color: #f4ecd8 !important;
+  color: #5b4636 !important;
+}
+
+.ReactReader__TocAreaButton {
+  color: #4b5563;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  border: none;
+  padding: 1.25rem 2rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.03);
+  text-align: left;
+}
+
+.ReactReader__TocAreaButton:hover {
+  color: #7c3aed;
+  background-color: #ffffff;
+  padding-left: 2.5rem;
+}
+
+.dark .ReactReader__TocAreaButton {
+  color: #9ca3af;
+  border-bottom-color: rgba(255, 255, 255, 0.03);
+}
+
+.dark .ReactReader__TocAreaButton:hover {
+  color: #ffffff;
+  background-color: #1a1d23;
+}
+
+.sepia .ReactReader__TocAreaButton {
+  color: #7A5F45;
+  border-bottom-color: rgba(91, 70, 54, 0.05);
+}
+
+.sepia .ReactReader__TocAreaButton:hover {
+  color: #433422;
+  background-color: #E5D7B7;
+}
+
+/* Ensure the reading surface inherits theme background safely */
+.light .ReactReader__Container { background-color: #ffffff !important; }
+.dark .ReactReader__Container { background-color: #0F1115 !important; }
+.sepia .ReactReader__Container { background-color: #F4ECD8 !important; }
+
+/* Summary View Typography */
+.summary-content h1, .summary-content h2, .summary-content h3 {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+}
+
+.summary-content p {
+  line-height: 1.8;
+  margin-bottom: 1.5rem;
+  font-size: 1.125rem;
+}
+
+.summary-content ul, .summary-content ol {
+  margin-bottom: 1.5rem;
+  padding-left: 1.5rem;
+}
+
+.summary-content li {
+  margin-bottom: 0.5rem;
+  position: relative;
+}
+
+/* Custom Scrollbar for Reader */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* STRICT PREVIEW LOCKDOWN */
+.preview-lockdown .ReactReader__Arrow {
+  display: none !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+.preview-lockdown iframe,
+.preview-lockdown .ReactReader__Container {
+  pointer-events: none !important;
+  user-select: none !important;
+}
+
+/* TOC Scrollbar */
+.ReactReader__Toc::-webkit-scrollbar {
+  width: 4px;
+}
+.ReactReader__Toc::-webkit-scrollbar-thumb {
+  background-color: #d1d5db; /* gray-300 */
+  border-radius: 9999px;
+}
+.dark .ReactReader__Toc::-webkit-scrollbar-thumb {
+  background-color: #374151; /* gray-700 */
+}
+
+
+.dark .flex-1.theme-transition.dark {
+  background-color: #0F1115 !important;
+}
+
+.sepia .flex-1.theme-transition.sepia {
+  background-color: #f4ecd8 !important;
+}
