@@ -162,4 +162,19 @@ const getMyLibrary = async (req, res) => {
   }
 };
 
+const getMyTransactions = async (req, res) => {
+  try {
+    const { data: orders, error } = await supabase
+      .from("orders")
+      .select("*")
+      .eq("user_id", req.user._id || req.user.id)
+      .order("created_at", { ascending: false });
+
+    if (error) throw error;
+    res.json(orders);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
 export { checkout, getMyTransactions, getMyLibrary };
