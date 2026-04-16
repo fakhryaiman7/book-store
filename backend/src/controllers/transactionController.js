@@ -14,13 +14,21 @@ const checkout = async (req, res) => {
     let lastOrder = null;
 
     for (const item of items) {
-       // Ensure bookId is pulled correctly
+      // Ensure bookId is pulled correctly
       const bookId = item.id || item._id;
       const { accessType, totalPrice, rentDays, pricePerDay } = item;
       const now = new Date();
 
       if (!bookId) {
         console.warn("Skipping item with missing ID");
+        continue;
+      }
+
+      // Supabase UUID validation regex
+      // If the ID is not a valid UUID, Postgres will throw a 22P02 error instead of gracefully skipping.
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(bookId)) {
+        console.warn(`Skipping item with invalid UUID format: ${bookId}`);
         continue;
       }
 
@@ -47,7 +55,7 @@ const checkout = async (req, res) => {
           .select()
           .single();
 
-        if (rentalErr) throw new Error(`Rental DB Error: ${rentalErr.message}`);
+        if (rentalErr) throw new Error(`Rental DB Error: ${rentalErr.message || JSON.stringify(rentalErr)}`);
 
         // 2. Grant Access
         const { error: accessErr } = await supabase
@@ -62,7 +70,7 @@ const checkout = async (req, res) => {
             granted_at: now.toISOString(),
           }], { onConflict: "user_id,book_id,access_type" });
 
-        if (accessErr) throw new Error(`Access DB Error (Rental): ${accessErr.message}`);
+        if (accessErr) throw new Error(`Access DB Error (Rental): ${accessErr.message || JSON.stringify(accessErr)}`);
 
       } else {
         // --- PURCHASE FLOW ---
@@ -79,7 +87,7 @@ const checkout = async (req, res) => {
           .select()
           .single();
 
-        if (orderErr) throw new Error(`Order DB Error: ${orderErr.message}`);
+        if (orderErr) throw new Error(`Order DB Error: ${orderErr.message || JSON.stringify(orderErr)}`);
         lastOrder = order;
 
         // 2. Grant Permanent Access
@@ -94,17 +102,18 @@ const checkout = async (req, res) => {
             granted_at: now.toISOString(),
           }], { onConflict: "user_id,book_id,access_type" });
 
-        if (accessErr) throw new Error(`Access DB Error (Purchase): ${accessErr.message}`);
+        if (accessErr) throw new Error(`Access DB Error (Purchase): ${accessErr.message || JSON.stringify(accessErr)}`);
       }
 
       // 3. Decrement Stock
       try {
-        const { data: bData } = await supabase.from("books").select("count_in_stock").eq("id", bookId).single();
-        if (bData && bData.count_in_stock > 0) {
-          await supabase.from("books").update({ count_in_stock: bData.count_in_stock - 1 }).eq("id", bookId);
+        const { data: bData, error: stockFetchErr } = await supabase.from("books").select("count_in_stock").eq("id", bookId).single();
+        if (bData && bData.count_in_stock > 0 && !stockFetchErr) {
+          const { error: updateErr } = await supabase.from("books").update({ count_in_stock: bData.count_in_stock - 1 }).eq("id", bookId);
+          if (updateErr) console.warn("Stock update warning:", updateErr.message);
         }
       } catch (stockErr) {
-        console.warn("Stock update failed (non-critical):", stockErr.message);
+        console.warn("Stock fetch/update failed (non-critical):", stockErr?.message || stockErr);
       }
     }
 
@@ -118,10 +127,14 @@ const checkout = async (req, res) => {
 
   } catch (err) {
     console.error("FATAL Checkout Error:", err);
+    
+    // Create a clear, stringified error message to ensure it is correctly passed to JSON
+    const errorMessage = err?.message || (typeof err === "string" ? err : JSON.stringify(err));
+    
     res.status(500).json({ 
       success: false, 
       message: "Checkout failed at the database level.",
-      error: err.message 
+      error: errorMessage,
     });
   }
 };

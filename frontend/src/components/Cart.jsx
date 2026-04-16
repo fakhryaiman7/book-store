@@ -59,6 +59,7 @@ const Cart = () => {
     } catch (err) {
       console.error("Checkout Failed:", err);
       setError(
+        err.response?.data?.error || 
         err.response?.data?.message || 
         err.message || 
         "Checkout failed. Please try again."
