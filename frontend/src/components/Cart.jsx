@@ -24,18 +24,8 @@ const Cart = () => {
   const subtotal = cartItems.reduce((acc, item) => acc + (item.totalPrice || 0), 0);
 
   const handleStartPayment = async () => {
-    window.alert("DEBUG: Payment button clicked! Opening modal...");
     if (!user) { navigate("/login?redirect=cart"); return; }
-    
-    // 1. Show simulated 'Contacting Bank' phase
-    setLoading(true);
-    setError(null);
-    
-    // Wait 2 seconds to simulate bank verification
-    setTimeout(() => {
-      setLoading(false);
-      setShowPaymentModal(true);
-    }, 2000);
+    setShowPaymentModal(true);
   };
 
   const checkoutHandler = async () => {
@@ -100,11 +90,6 @@ const Cart = () => {
   return (
     <div className="bg-white dark:bg-gray-950 min-h-screen py-20 px-4 sm:px-6 lg:px-12 transition-colors duration-300">
       <div className="max-w-7xl mx-auto space-y-12">
-        {/* DEBUG BANNER - Remove after confirmation */}
-        <div className="bg-red-600 text-white p-4 rounded-2xl text-center font-black animate-pulse mb-8">
-           🛡️ SECURE CHECKOUT SYSTEM ACTIVE 🛡️
-        </div>
-
         <div className="flex items-center justify-between mb-8 pb-8 border-b border-gray-100 dark:border-gray-800">
           <div>
             <h1 className="text-4xl lg:text-5xl font-black text-gray-900 dark:text-white tracking-tighter mb-2">{t("shopping_cart") || "Shopping Cart"}</h1>
