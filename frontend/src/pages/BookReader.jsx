@@ -180,6 +180,42 @@ const BookReader = () => {
     }
   }, [location]);
 
+  // ─── Content Protection ──────────────────────────────────────────────────
+  useEffect(() => {
+    const handleContextMenu = (e) => e.preventDefault();
+    const handleKeyDown = (e) => {
+      // Disable: Ctrl+C, Ctrl+S, Ctrl+P, Ctrl+U (view source), F12
+      if (
+        (e.ctrlKey && (e.key === 'c' || e.key === 's' || e.key === 'p' || e.key === 'u')) ||
+        e.key === 'F12' || (e.metaKey && e.key === 'p')
+      ) {
+        e.preventDefault();
+      }
+    };
+
+    document.addEventListener('contextmenu', handleContextMenu);
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('contextmenu', handleContextMenu);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
+
+  const Watermark = () => {
+    if (!user) return null;
+    const items = Array(20).fill(user.email || user.name);
+    return (
+      <div className="watermark pointer-events-none fixed inset-0 z-50 flex flex-wrap justify-around align-middle opacity-[0.03] overflow-hidden select-none">
+        {items.map((text, i) => (
+          <div key={i} className="text-sm font-black uppercase tracking-widest transform -rotate-45 p-20 whitespace-nowrap">
+            {text} • PROTECTED CONTENT
+          </div>
+        ))}
+      </div>
+    );
+  };
+
   // ─── Theme styles ──────────
   const baseReaderStyles = {
     fontFamily: "'Merriweather', 'Georgia', serif",
@@ -384,7 +420,9 @@ const BookReader = () => {
 
   const theme = readerTheme; // Local ref for inline template literals
   return (
-    <div className={`min-h-screen flex flex-col transition-colors duration-500 ${s.wrapper} reader-wrapper theme-${readerTheme}`}>
+    <div className={`min-h-screen flex flex-col transition-colors duration-500 ${s.wrapper} reader-wrapper theme-${readerTheme} protected-content`}>
+      <Watermark />
+
 
       {/* ── Toolbar ── */}
       <div className={`sticky top-0 z-40 border-b transition-all duration-500 shadow-sm ${s.toolbar}`}>
@@ -1206,6 +1244,24 @@ const BookReader = () => {
             </>
           </div>
         )}
+        <style dangerouslySetInnerHTML={{ __html: `
+          @media print {
+            body { display: none !important; }
+            .reader-wrapper { display: none !important; }
+          }
+          
+          .protected-content {
+            user-select: none !important;
+            -webkit-user-select: none !important;
+            -moz-user-select: none !important;
+            -ms-user-select: none !important;
+          }
+          
+          /* Allow iframe but restrict some interactions if possible */
+          .reader-view iframe {
+            pointer-events: auto;
+          }
+        `}} />
       </div>
     </div>
   );
