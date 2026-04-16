@@ -71,8 +71,9 @@ const registerUser = async (req, res) => {
     .single();
 
   if (error || !user) {
+    console.error("Supabase Registration Error:", error);
     res.status(400);
-    throw new Error("Invalid user data");
+    throw new Error(error?.message || "Invalid user data");
   }
 
   res.status(201).json({

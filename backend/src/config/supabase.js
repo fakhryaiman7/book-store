@@ -4,12 +4,14 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const supabaseUrl = (process.env.SUPABASE_URL || '').trim();
-// Use SERVICE_ROLE_KEY for backend operations to bypass RLS
-const supabaseKey = (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || '').trim();
+const serviceKey = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
+const anonKey = (process.env.SUPABASE_ANON_KEY || '').trim();
 
-if (!supabaseUrl || !supabaseKey) {
-  console.warn("WARNING: Supabase URL or Keys are missing from environment variables.");
-}
+// Use SERVICE_ROLE_KEY for backend operations to bypass RLS, fallback to anon if missing
+const supabaseKey = serviceKey || anonKey;
+
+if (!supabaseUrl) console.error("CRITICAL: SUPABASE_URL is missing!");
+if (!serviceKey) console.warn("WARNING: SUPABASE_SERVICE_ROLE_KEY is missing! Using Anon Key (RLS will block writes).");
 
 export const supabase = createClient(supabaseUrl, supabaseKey, {
   auth: {
