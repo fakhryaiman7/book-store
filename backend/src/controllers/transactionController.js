@@ -69,7 +69,9 @@ const checkout = async (req, res) => {
 
         if (rentalErr) {
            console.error(`[FATAL] RPC create_rental_with_access failed:`, rentalErr);
-           throw new Error(`Checkout failed: ${rentalErr.message || "Atomic transaction error"}`);
+           // Capture detailed Postgres error if available (e.g. from RAISE EXCEPTION DETAIL)
+           const detailedError = rentalErr.details || rentalErr.hint || rentalErr.message || "Atomic transaction error";
+           throw new Error(`Checkout failed: ${detailedError}`);
         }
 
         console.log(`[CHECKOUT] Rental created successfully: ${rental.rental_id}`);
