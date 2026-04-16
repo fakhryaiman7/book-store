@@ -128,6 +128,10 @@ const BookReader = () => {
       if (!finalAccess && !previewMode) {
         // Find any expired rental to show a better message
         const isExpired = accessRows?.some(r => r.access_type === 'rental' && r.expires_at && new Date(r.expires_at) < now);
+        
+        // ADDED ALERT FOR DEBUGGING
+        alert(`Access Denied!\nUser ID: ${authUserId}\nBook ID: ${bookId}\nRecords found in DB: ${accessRows?.length || 0}`);
+        
         setError(isExpired ? "expired" : "no_access");
         setLoading(false);
         return;
@@ -193,9 +197,10 @@ const BookReader = () => {
 
   // ─── Content Protection ──────────────────────────────────────────────────
   useEffect(() => {
+    // Temporarily disabled for debugging
+    /*
     const handleContextMenu = (e) => e.preventDefault();
     const handleKeyDown = (e) => {
-      // Disable: Ctrl+C, Ctrl+S, Ctrl+P, Ctrl+U (view source), F12
       if (
         (e.ctrlKey && (e.key === 'c' || e.key === 's' || e.key === 'p' || e.key === 'u')) ||
         e.key === 'F12' || (e.metaKey && e.key === 'p')
@@ -211,6 +216,8 @@ const BookReader = () => {
       document.removeEventListener('contextmenu', handleContextMenu);
       document.removeEventListener('keydown', handleKeyDown);
     };
+    */
+  }, []);
   }, []);
 
   const Watermark = () => {
