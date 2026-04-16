@@ -59,6 +59,8 @@ const checkout = async (req, res) => {
         if (!rental || !rental.id) throw new Error(`Rental DB Error: Insert succeeded but no rental ID was returned. Check RLS policies.`);
 
         // 2. Grant Access
+        // Note: rental_id is intentionally omitted — it's nullable and causes FK constraint
+        // failures in serverless contexts. The rental itself is tracked in the rentals table.
         const { error: accessErr } = await supabase
           .from("user_book_access")
           .upsert([{
@@ -67,8 +69,6 @@ const checkout = async (req, res) => {
             access_type: "rental",
             expires_at: dueDate.toISOString(),
             is_active: true,
-            // Only set rental_id when we have a valid UUID — avoids FK violations
-            ...(rental?.id ? { rental_id: rental.id } : {}),
             granted_at: now.toISOString(),
           }], { onConflict: "user_id,book_id,access_type" });
 
