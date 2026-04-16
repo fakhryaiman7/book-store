@@ -14,7 +14,7 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "@supabase/supabase-js": "^2.98.0",
+    "@supabase/supabase-js": "latest",
     "axios": "^1.13.6",
     "bcryptjs": "^3.0.3",
     "colorette": "^2.0.20",
