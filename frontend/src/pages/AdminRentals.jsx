@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import AdminSidebar from "../components/AdminSidebar";
-import { supabase } from "../lib/supabase";
 import { useTranslation } from "react-i18next";
+import axios from "../api/axios";
 
 const AdminRentals = () => {
   const { t, i18n } = useTranslation();
@@ -13,35 +13,31 @@ const AdminRentals = () => {
   const fetchRentals = async () => {
     setLoading(true);
     try {
+      const { data } = await axios.get("/api/admin/orders");
+      let result = data || [];
+      
+      const now = new Date();
       if (filter === "purchases") {
-        const { data } = await supabase
-          .from("user_book_access")
-          .select(`*, user:users(name, email), book:books(title, image, purchase_price)`)
-          .eq("access_type", "purchase")
-          .order("created_at", { ascending: false });
-        setRentals(data || []);
+        result = result.filter(r => r.access_type === "purchase");
       } else {
-        let query = supabase
-          .from("rentals")
-          .select(`*, user:users(name, email), book:books(title, image)`)
-          .order("created_at", { ascending: false });
+        result = result.filter(r => r.access_type !== "purchase");
         if (filter !== "all") {
-          if (filter === "active") query = query.eq("status", "active");
-          else if (filter === "overdue") query = query.eq("status", "active"); 
-          else query = query.eq("status", filter);
+          if (filter === "overdue") {
+            result = result.filter(r => r.status === "active" && new Date(r.rental_due_date) < now);
+          } else if (filter === "active") {
+            result = result.filter(r => r.status === "active" && new Date(r.rental_due_date) >= now);
+          } else {
+            result = result.filter(r => r.status === filter);
+          }
         }
-        const { data } = await query;
-        const now = new Date();
-        let withStatus = (data || []).map(r => ({
-          ...r,
-          status: r.status === "active" && new Date(r.rental_due_date) < now ? "overdue" : r.status
-        }));
-        if (filter === "overdue") withStatus = withStatus.filter(r => r.status === "overdue");
-        if (filter === "active") withStatus = withStatus.filter(r => r.status === "active");
-        setRentals(withStatus);
       }
+      
+      setRentals(result.map(r => ({
+        ...r,
+        status: (r.status === "active" && new Date(r.rental_due_date) < now) ? "overdue" : r.status
+      })));
     } catch (err) {
-      console.error(err);
+      console.error("Fetch Rentals Error:", err);
     } finally {
       setLoading(false);
     }
@@ -51,37 +47,19 @@ const AdminRentals = () => {
 
   const updateStatus = async (rental, st) => {
     try {
-      const now = new Date();
       const isActivating = st === "active";
-      
-      const updateData = { status: st, updated_at: now.toISOString() };
-      
-      if (st === "returned") {
-        updateData.return_date = now.toISOString();
-      } else if (st === "active") {
-        updateData.return_date = null;
-      }
+      const payload = { 
+        status: st, 
+        return_date: st === "returned" ? new Date().toISOString() : null,
+        is_active: isActivating
+      };
 
-      const { error: err } = await supabase.from("rentals").update(updateData).eq("id", rental.id);
-      if (err) throw err;
-
-      await supabase.from("user_book_access").update({ 
-        is_active: isActivating 
-      }).eq("rental_id", rental.id);
-
-      if (st === "returned" && rental.status !== "returned") {
-        const { data: b } = await supabase.from("books").select("count_in_stock").eq("id", rental.book_id).single();
-        if (b) await supabase.from("books").update({ count_in_stock: (b.count_in_stock || 0) + 1 }).eq("id", rental.book_id);
-      } else if (st === "active" && rental.status === "returned") {
-        const { data: b } = await supabase.from("books").select("count_in_stock").eq("id", rental.book_id).single();
-        if (b) await supabase.from("books").update({ count_in_stock: Math.max(0, (b.count_in_stock || 0) - 1) }).eq("id", rental.book_id);
-      }
-
+      await axios.put(`/api/admin/orders/${rental.id}`, payload);
       setSuccess(t("status_updated_msg") || `Status updated to ${st}!`);
       fetchRentals();
     } catch (err) {
       console.error(err);
-      alert(t("update_error") || "Error updating status: " + (err.message || "Unknown error"));
+      alert(err.response?.data?.message || err.message);
     }
     setTimeout(() => setSuccess(null), 3000);
   };
