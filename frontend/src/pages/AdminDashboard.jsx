@@ -4,6 +4,7 @@ import { AuthContext } from "../context/AuthContext";
 import { supabase } from "../lib/supabase";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import axios from "../api/axios";
 
 const AdminDashboard = () => {
   const { user } = useContext(AuthContext);
@@ -16,24 +17,27 @@ const AdminDashboard = () => {
   useEffect(() => {
     const fetchDashboardData = async () => {
       setLoading(true);
+      try {
+        const [statsRes, recentRes] = await Promise.all([
+          axios.get("/api/admin/stats"),
+          axios.get("/api/admin/orders"),
+        ]);
 
-      const [rentalsRes, booksRes, usersRes, recentRes] = await Promise.all([
-        supabase.from("rentals").select("total_rental_cost, status, rental_due_date"),
-        supabase.from("books").select("count_in_stock"),
-        supabase.from("users").select("id, is_active"),
-        supabase.from("rentals").select(`id, total_rental_cost, status, rental_due_date, created_at, user:users(name), book:books(title)`).order("created_at", { ascending: false }).limit(5),
-      ]);
-
-      const now = new Date();
-      const allRentals = rentalsRes.data || [];
-      const revenue = allRentals.reduce((sum, r) => sum + parseFloat(r.total_rental_cost || 0), 0);
-      const activeRentals = allRentals.filter(r => r.status === "active" && new Date(r.rental_due_date) >= now).length;
-      const booksInStock = (booksRes.data || []).reduce((sum, b) => sum + (b.count_in_stock || 0), 0);
-      const totalUsers = (usersRes.data || []).length;
-
-      setStats({ revenue, activeRentals, booksInStock, totalUsers });
-      setRecentRentals(recentRes.data || []);
-      setLoading(false);
+        const s = statsRes.data;
+        setStats({ 
+          revenue: s.totalRevenue || 0, 
+          activeRentals: s.activeRentals || 0, 
+          booksInStock: s.booksCount || 0, 
+          totalUsers: s.usersCount || 0 
+        });
+        
+        // Take the first 5 for recent transactions
+        setRecentRentals(recentRes.data?.slice(0, 5) || []);
+      } catch (err) {
+        console.error("Dashboard Fetch Error:", err);
+      } finally {
+        setLoading(false);
+      }
     };
     fetchDashboardData();
   }, []);

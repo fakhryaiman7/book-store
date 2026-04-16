@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import AdminSidebar from "../components/AdminSidebar";
-import { supabase } from "../lib/supabase";
 import { useTranslation } from "react-i18next";
+import axios from "../api/axios";
 
 const AdminUsers = () => {
   const { t, i18n } = useTranslation();
@@ -22,9 +22,14 @@ const AdminUsers = () => {
 
   const fetchUsers = async () => {
     setLoading(true);
-    const { data, error } = await supabase.from("users").select("id, name, email, role, is_admin, phone, is_active, created_at").order("created_at", { ascending: false });
-    if (!error) setUsers(data || []);
-    setLoading(false);
+    try {
+      const { data } = await axios.get("/api/admin/users");
+      setUsers(data || []);
+    } catch (err) {
+      setError(err.response?.data?.message || err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { fetchUsers(); }, []);
@@ -34,31 +39,53 @@ const AdminUsers = () => {
 
   const handleSave = async (e) => {
     e.preventDefault(); setSaving(true); setError(null);
-    const payload = { name: form.name, email: form.email, role: form.role, phone: form.phone, is_admin: form.role === "admin", is_active: form.is_active, updated_at: new Date().toISOString() };
-    let err;
-    if (editId) {
-      ({ error: err } = await supabase.from("users").update(payload).eq("id", editId));
-    } else {
-      // For adding users from admin panel, we need a password hash — use placeholder
-      const bcryptPlaceholder = "$2a$10$placeholder_admin_created_user";
-      ({ error: err } = await supabase.from("users").insert([{ ...payload, password: bcryptPlaceholder }]));
+    const payload = { 
+      name: form.name, 
+      email: form.email, 
+      is_admin: form.role === "admin", 
+      is_active: form.is_active,
+      phone: form.phone
+    };
+    
+    try {
+      if (editId) {
+        await axios.put(`/api/admin/users/${editId}`, payload);
+        setSuccess("User updated!");
+      } else {
+        // Registration is typically handled through a different flow, but we can support admin creation
+        await axios.post("/api/auth/register", { ...payload, password: "tempPassword123" });
+        setSuccess("User created!");
+      }
+      setShowModal(false); 
+      fetchUsers();
+    } catch (err) {
+      setError(err.response?.data?.message || err.message);
+    } finally {
+      setSaving(false);
     }
-    if (err) { setError(err.message); }
-    else { setSuccess(editId ? "User updated!" : "User created!"); setShowModal(false); fetchUsers(); }
-    setSaving(false);
     setTimeout(() => setSuccess(null), 3000);
   };
 
   const handleDelete = async () => {
-    const { error: err } = await supabase.from("users").delete().eq("id", deleteId);
-    if (!err) { setSuccess("User deleted!"); fetchUsers(); }
-    setDeleteId(null);
+    try {
+      await axios.delete(`/api/admin/users/${deleteId}`);
+      setSuccess("User deleted!");
+      fetchUsers();
+    } catch (err) {
+      alert(err.response?.data?.message || err.message);
+    } finally {
+      setDeleteId(null);
+    }
     setTimeout(() => setSuccess(null), 3000);
   };
 
   const toggleActive = async (user) => {
-    await supabase.from("users").update({ is_active: !user.is_active }).eq("id", user.id);
-    fetchUsers();
+    try {
+       await axios.put(`/api/admin/users/${user.id}`, { is_active: !user.is_active });
+       fetchUsers();
+    } catch (err) {
+       console.error(err);
+    }
   };
 
   const fmt = (d) => {

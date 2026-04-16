@@ -78,43 +78,66 @@ const BookReader = () => {
         return;
       }
       
-      // Purchases
-      const { data: accessRows } = await supabase
+      // 2. Comprehensive Access Check (Purchases & Rentals)
+      const authUserId = user?.id || user?._id;
+      if (!authUserId) {
+        setError("no_access");
+        setLoading(false);
+        return;
+      }
+
+      // Check unified access table (covers both rentals and purchases)
+      const { data: accessRows, error: accessErr } = await supabase
         .from("user_book_access")
         .select("*")
         .eq("user_id", authUserId)
         .eq("book_id", bookId)
-        .eq("is_active", true)
-        .eq("access_type", "purchase")
-        .limit(1);
+        .eq("is_active", true);
 
-      // Rentals
+      if (accessErr) {
+        console.error("Access check error:", accessErr);
+      }
+
       const now = new Date();
-      const { data: rentalsRows } = await supabase
-        .from("rentals")
-        .select("*")
-        .eq("user_id", authUserId)
-        .eq("book_id", bookId)
-        .order("created_at", { ascending: false });
+      
+      // Find valid access (either a purchase or a rental that hasn't expired yet)
+      const validAccess = accessRows?.find(row => {
+        if (row.access_type === 'purchase') return true;
+        if (row.access_type === 'rental') {
+          return !row.expires_at || new Date(row.expires_at) > now;
+        }
+        return false;
+      });
 
-      const purchase = accessRows && accessRows.length > 0 ? accessRows[0] : null;
-      let activeRental = null;
-      let hasPastRental = false;
+      // Special fallback check for rentals table directly (for extra safety)
+      let activeRentalFallback = null;
+      if (!validAccess) {
+        const { data: rentalsRows } = await supabase
+          .from("rentals")
+          .select("*")
+          .eq("user_id", authUserId)
+          .eq("book_id", bookId)
+          .eq("status", "active")
+          .order("created_at", { ascending: false });
 
-      if (rentalsRows && rentalsRows.length > 0) {
-        hasPastRental = true;
-        const validR = rentalsRows.find(
-          r => r.status === "active" && (!r.rental_due_date || new Date(r.rental_due_date) > now)
-        );
+        const validR = rentalsRows?.find(r => !r.rental_due_date || new Date(r.rental_due_date) > now);
         if (validR) {
-          activeRental = {
+          activeRentalFallback = {
             access_type: "rental",
             expires_at: validR.rental_due_date
           };
         }
       }
 
-      const validAccess = purchase || activeRental;
+      const finalAccess = validAccess || activeRentalFallback;
+
+      if (!finalAccess && !previewMode) {
+        setError("no_access");
+        setLoading(false);
+        return;
+      }
+
+      setAccess(finalAccess);
 
       if (!validAccess && !previewMode) {
         setError(hasPastRental ? "expired" : "no_access");

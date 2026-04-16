@@ -167,5 +167,146 @@ const internalizeFile = async (req, res) => {
   }
 };
 
-export { createBook, updateBook, deleteBook, internalizeFile };
+// @desc    Get dashboard statistics
+// @route   GET /api/admin/stats
+// @access  Private/Admin
+const getAdminStats = async (req, res) => {
+  try {
+    // 1. Total Revenue from successful orders
+    const { data: orders } = await supabase.from("orders").select("total_amount").eq("payment_status", "paid");
+    const totalRevenue = orders?.reduce((sum, order) => sum + (parseFloat(order.total_amount) || 0), 0) || 0;
+
+    // 2. Active Rentals
+    const { count: activeRentals } = await supabase.from("rentals").select("*", { count: "exact", head: true }).eq("status", "active");
+
+    // 3. Books Count
+    const { count: booksCount } = await supabase.from("books").select("*", { count: "exact", head: true });
+
+    // 4. Users Count
+    const { count: usersCount } = await supabase.from("users").select("*", { count: "exact", head: true });
+
+    res.json({
+      totalRevenue,
+      activeRentals: activeRentals || 0,
+      booksCount: booksCount || 0,
+      usersCount: usersCount || 0
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// @desc    Get all users
+// @route   GET /api/admin/users
+// @access  Private/Admin
+const getAdminUsers = async (req, res) => {
+  try {
+    const { data: users, error } = await supabase
+      .from("users")
+      .select("id, name, email, is_admin, created_at")
+      .order("created_at", { ascending: false });
+
+    if (error) throw error;
+    res.json(users);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// @desc    Get all orders/rentals
+// @route   GET /api/admin/orders
+// @access  Private/Admin
+const getAdminOrders = async (req, res) => {
+  try {
+    const { data: rentals, error: rentErr } = await supabase
+      .from("rentals")
+      .select("*, book:books(title), user:users(name, email)")
+      .order("created_at", { ascending: false });
+
+    if (rentErr) throw rentErr;
+    res.json(rentals);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// @desc    Update a user
+// @route   PUT /api/admin/users/:id
+// @access  Private/Admin
+const updateAdminUser = async (req, res) => {
+  try {
+    const { name, email, is_admin, is_active, phone } = req.body;
+    const { data: updatedUser, error } = await supabase
+      .from("users")
+      .update({ name, email, is_admin, is_active, phone, updated_at: new Date().toISOString() })
+      .eq("id", req.params.id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.json(updatedUser);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// @desc    Delete a user
+// @route   DELETE /api/admin/users/:id
+// @access  Private/Admin
+const deleteAdminUser = async (req, res) => {
+  try {
+    const { error } = await supabase.from("users").delete().eq("id", req.params.id);
+    if (error) throw error;
+    res.json({ message: "User deleted" });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// @desc    Update order/rental status
+// @route   PUT /api/admin/orders/:id
+// @access  Private/Admin
+const updateAdminOrder = async (req, res) => {
+  try {
+    const { status, return_date, is_active } = req.body;
+    const rentalId = req.params.id;
+
+    // 1. Update rentals table if it's a rental
+    const { data: rental, error: rentErr } = await supabase
+      .from("rentals")
+      .update({ status, return_date, updated_at: new Date().toISOString() })
+      .eq("id", rentalId)
+      .select()
+      .single();
+
+    // 2. Sync with user_book_access
+    await supabase
+      .from("user_book_access")
+      .update({ is_active: is_active ?? (status === 'active') })
+      .eq("rental_id", rentalId);
+
+    // 3. Stock management if returned
+    if (status === 'returned' && rental) {
+       const { data: b } = await supabase.from("books").select("count_in_stock").eq("id", rental.book_id).single();
+       if (b) await supabase.from("books").update({ count_in_stock: (b.count_in_stock || 0) + 1 }).eq("id", rental.book_id);
+    }
+
+    res.json({ message: "Order updated" });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+export { 
+  createBook, 
+  updateBook, 
+  deleteBook, 
+  internalizeFile, 
+  getAdminStats, 
+  getAdminUsers, 
+  getAdminOrders,
+  updateAdminUser,
+  deleteAdminUser,
+  updateAdminOrder
+};
 
