@@ -1,6 +1,7 @@
 import { useState, useEffect, useContext } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
+import API from "../api/axios";
 import { AuthContext } from "../context/AuthContext";
 import { useTranslation } from "react-i18next";
 
@@ -16,60 +17,52 @@ const MyLibrary = () => {
     if (!user) { navigate("/login"); return; }
     const fetchLibrary = async () => {
       setLoading(true);
-      
-      const authUserId = user?.id || user?._id;
-      // -- 1. FETCH RENTALS --
-      const { data: rentalsData } = await supabase
-        .from("rentals")
-        .select(`*, book:books(*)`)
-        .eq("user_id", authUserId)
-        .order("created_at", { ascending: false });
+      try {
+        // Fetch from SECURE Backend API
+        const { data } = await API.get("/api/transactions/mylibrary");
+        
+        if (!data.success) throw new Error(data.message);
 
-      // -- 2. FETCH PURCHASES --
-      const { data: ubaData } = await supabase
-        .from("user_book_access")
-        .select(`*, book:books(*)`)
-        .eq("user_id", authUserId)
-        .eq("access_type", "purchase")
-        .eq("is_active", true)
-        .order("granted_at", { ascending: false });
+        const now = new Date();
+        let merged = [];
 
-      // Merge results
-      const now = new Date();
-      let merged = [];
-
-      (rentalsData || []).forEach(r => {
-        if (!r.book) return;
-        const isExp = r.status !== "active" || (r.rental_due_date && new Date(r.rental_due_date) < now);
-        merged.push({
-          id: r.id, 
-          access_type: "rental",
-          book: r.book,
-          isExpired: isExp,
-          daysLeft: r.rental_due_date 
-            ? Math.max(0, Math.ceil((new Date(r.rental_due_date) - now) / (1000 * 60 * 60 * 24))) 
-            : null,
-          expires_at: r.rental_due_date,
-          created_at: r.created_at || r.granted_at
+        // 1. Process Rentals
+        (data.rentals || []).forEach(r => {
+          if (!r.book) return;
+          const isExp = r.status !== "active" || (r.rental_due_date && new Date(r.rental_due_date) < now);
+          merged.push({
+            id: r.id, 
+            access_type: "rental",
+            book: r.book,
+            isExpired: isExp,
+            daysLeft: r.rental_due_date 
+              ? Math.max(0, Math.ceil((new Date(r.rental_due_date) - now) / (1000 * 60 * 60 * 24))) 
+              : null,
+            expires_at: r.rental_due_date,
+            created_at: r.created_at || r.granted_at
+          });
         });
-      });
 
-      (ubaData || []).forEach(a => {
-        // Fallback for missing book join (helps debug ID mismatches)
-        const bookData = a.book || { title: "Unknown Book", author: "ID: " + a.book_id };
-        merged.push({
-          id: a.id,
-          access_type: "purchase",
-          book: bookData,
-          isExpired: false,
-          daysLeft: null,
-          created_at: a.created_at || a.granted_at
+        // 2. Process Purchases
+        (data.purchases || []).forEach(a => {
+          const bookData = a.book || { title: "Unknown Book", author: "ID: " + a.book_id };
+          merged.push({
+            id: a.id,
+            access_type: "purchase",
+            book: bookData,
+            isExpired: false,
+            daysLeft: null,
+            created_at: a.created_at || a.granted_at
+          });
         });
-      });
 
-      merged.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-      setItems(merged);
-      setLoading(false);
+        merged.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        setItems(merged);
+      } catch (err) {
+        console.error("Failed to fetch library:", err);
+      } finally {
+        setLoading(false);
+      }
     };
     fetchLibrary();
   }, [user, navigate]);

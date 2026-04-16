@@ -1,112 +1,165 @@
 import { supabase } from "../config/supabase.js";
 
-// @desc    Process a full checkout (multi-item)
-// @route   POST /api/transactions/checkout
-// @access  Private
 const checkout = async (req, res) => {
   const { items, paymentMethod } = req.body;
-  const userId = req.user._id;
+  const userId = req.user._id || req.user.id;
 
   if (!items || items.length === 0) {
-    res.status(400);
-    throw new Error("No items in cart");
+    return res.status(400).json({ success: false, message: "Cart is empty" });
   }
 
+  console.log(`Processing checkout for User: ${userId}, Items: ${items.length}`);
+
   try {
-    const results = [];
-    const now = new Date();
+    let lastOrder = null;
 
-    // 1. Create a Primary Order Record
-    const totalOrderAmount = items.reduce((acc, item) => acc + (item.totalPrice || 0), 0);
-    const { data: order, error: orderErr } = await supabase
-      .from("orders")
-      .insert([{
-        user_id: userId,
-        total_amount: totalOrderAmount,
-        payment_status: "paid", // Mocked as paid
-        order_status: "completed",
-      }])
-      .select()
-      .single();
-
-    if (orderErr) throw new Error("Backend Order creation failed: " + orderErr.message);
-
-    // 2. Process each item (Rentals vs Purchases)
     for (const item of items) {
+       // Ensure bookId is pulled correctly
       const bookId = item.id || item._id;
-      const isRental = item.accessType === "rent" || item.accessType === "rental";
-      const totalCost = item.totalPrice || 0;
+      const { accessType, totalPrice, rentDays, pricePerDay } = item;
+      const now = new Date();
 
-      // Handle Rental
+      if (!bookId) {
+        console.warn("Skipping item with missing ID");
+        continue;
+      }
+
+      const isRental = accessType === "rent" || accessType === "rental";
+
       if (isRental) {
-        const rentDays = item.rentDays || 1;
+        // --- RENTAL FLOW ---
         const dueDate = new Date();
-        dueDate.setDate(dueDate.getDate() + rentDays);
+        dueDate.setDate(dueDate.getDate() + (parseInt(rentDays) || 1));
 
-        const { data: rental, error: rentalErr } = await supabase.from("rentals").insert([{
-          user_id: userId,
-          book_id: bookId,
-          rental_days: rentDays,
-          rental_price_per_day: parseFloat(item.pricePerDay || 0),
-          total_rental_cost: totalCost,
-          rental_start_date: now.toISOString(),
-          rental_due_date: dueDate.toISOString(),
-          status: "active",
-        }]).select().single();
+        // 1. Create Rental Record
+        const { data: rental, error: rentalErr } = await supabase
+          .from("rentals")
+          .insert([{
+            user_id: userId,
+            book_id: bookId,
+            rental_days: parseInt(rentDays) || 1,
+            rental_price_per_day: parseFloat(pricePerDay || 0),
+            total_rental_cost: parseFloat(totalPrice || 0),
+            rental_start_date: now.toISOString(),
+            rental_due_date: dueDate.toISOString(),
+            status: "active",
+          }])
+          .select()
+          .single();
 
-        if (rentalErr) throw new Error(`Rental failed for ${bookId}: ${rentalErr.message}`);
+        if (rentalErr) throw new Error(`Rental DB Error: ${rentalErr.message}`);
 
-        // Grant Access
-        await supabase.from("user_book_access").upsert([{
-          user_id: userId,
-          book_id: bookId,
-          access_type: "rental",
-          expires_at: dueDate.toISOString(),
-          is_active: true,
-          rental_id: rental.id,
-        }], { onConflict: "user_id,book_id,access_type" });
+        // 2. Grant Access
+        const { error: accessErr } = await supabase
+          .from("user_book_access")
+          .upsert([{
+            user_id: userId,
+            book_id: bookId,
+            access_type: "rental",
+            expires_at: dueDate.toISOString(),
+            is_active: true,
+            rental_id: rental.id,
+            granted_at: now.toISOString(),
+          }], { onConflict: "user_id,book_id,access_type" });
+
+        if (accessErr) throw new Error(`Access DB Error (Rental): ${accessErr.message}`);
 
       } else {
-        // Handle Purchase
-        const { error: accessErr } = await supabase.from("user_book_access").upsert([{
-          user_id: userId,
-          book_id: bookId,
-          access_type: "purchase",
-          expires_at: null,
-          is_active: true,
-        }], { onConflict: "user_id,book_id,access_type" });
+        // --- PURCHASE FLOW ---
+        // 1. Create Order
+        const { data: order, error: orderErr } = await supabase
+          .from("orders")
+          .insert([{
+            user_id: userId,
+            total_amount: parseFloat(totalPrice || 0),
+            payment_status: "paid",
+            order_status: "completed",
+            created_at: now.toISOString()
+          }])
+          .select()
+          .single();
 
-        if (accessErr) throw new Error(`Purchase access failed for ${bookId}: ${accessErr.message}`);
+        if (orderErr) throw new Error(`Order DB Error: ${orderErr.message}`);
+        lastOrder = order;
+
+        // 2. Grant Permanent Access
+        const { error: accessErr } = await supabase
+          .from("user_book_access")
+          .upsert([{
+            user_id: userId,
+            book_id: bookId,
+            access_type: "purchase",
+            expires_at: null,
+            is_active: true,
+            granted_at: now.toISOString(),
+          }], { onConflict: "user_id,book_id,access_type" });
+
+        if (accessErr) throw new Error(`Access DB Error (Purchase): ${accessErr.message}`);
       }
 
       // 3. Decrement Stock
-      const { data: book } = await supabase.from("books").select("count_in_stock").eq("id", bookId).single();
-      if (book) {
-        await supabase.from("books").update({ count_in_stock: Math.max(0, book.count_in_stock - 1) }).eq("id", bookId);
+      try {
+        const { data: bData } = await supabase.from("books").select("count_in_stock").eq("id", bookId).single();
+        if (bData && bData.count_in_stock > 0) {
+          await supabase.from("books").update({ count_in_stock: bData.count_in_stock - 1 }).eq("id", bookId);
+        }
+      } catch (stockErr) {
+        console.warn("Stock update failed (non-critical):", stockErr.message);
       }
     }
 
-    res.status(201).json({ success: true, orderId: order.id });
+    console.log("Checkout completed successfully for user:", userId);
 
-  } catch (error) {
-    console.error("Checkout Error:", error.message);
-    res.status(500);
-    throw new Error(error.message);
+    res.status(200).json({
+      success: true,
+      message: "Checkout successful. Books added to your library.",
+      orderId: lastOrder?.id
+    });
+
+  } catch (err) {
+    console.error("FATAL Checkout Error:", err);
+    res.status(500).json({ 
+      success: false, 
+      message: "Checkout failed at the database level.",
+      error: err.message 
+    });
   }
 };
 
-// @desc    Get logged in user transactions (simplified)
-const getMyTransactions = async (req, res) => {
-  const { data: orders, error } = await supabase
-    .from("orders")
-    .select(`*`)
-    .eq("user_id", req.user._id);
+const getMyLibrary = async (req, res) => {
+  try {
+    const userId = req.user._id || req.user.id;
 
-  if (error) {
-    res.status(500);
-    throw new Error(error.message);
+    // Fetch rentals
+    const { data: rentals, error: rentErr } = await supabase
+      .from("rentals")
+      .select("*, book:books(*)")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false });
+
+    if (rentErr) throw rentErr;
+
+    // Fetch purchases
+    const { data: purchases, error: purchaseErr } = await supabase
+      .from("user_book_access")
+      .select("*, book:books(*)")
+      .eq("user_id", userId)
+      .eq("access_type", "purchase")
+      .eq("is_active", true)
+      .order("granted_at", { ascending: false });
+
+    if (purchaseErr) throw purchaseErr;
+
+    res.json({
+      success: true,
+      rentals: rentals || [],
+      purchases: purchases || []
+    });
+
+  } catch (err) {
+    console.error("Library Fetch Error:", err);
+    res.status(500).json({ success: false, message: err.message });
   }
-  res.json(orders);
 };
 
-export { checkout, getMyTransactions };
+export { checkout, getMyTransactions, getMyLibrary };
