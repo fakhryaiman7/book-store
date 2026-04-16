@@ -70,14 +70,6 @@ const BookReader = () => {
       if (!bookData) { setError("Book not found."); setLoading(false); return; }
       setBook(bookData);
 
-      // 2. Verify user has access via user_book_access (purchases) OR rentals (active rentals)
-      const authUserId = user?.id || user?._id;
-      if (!authUserId) {
-        setError("no_access");
-        setLoading(false);
-        return;
-      }
-      
       // 2. Comprehensive Access Check (Purchases & Rentals)
       const authUserId = user?.id || user?._id;
       if (!authUserId) {
@@ -85,6 +77,8 @@ const BookReader = () => {
         setLoading(false);
         return;
       }
+
+      console.log("[DEBUG] Checking access for User:", authUserId, "Book:", bookId);
 
       // Check unified access table (covers both rentals and purchases)
       const { data: accessRows, error: accessErr } = await supabase
@@ -94,9 +88,7 @@ const BookReader = () => {
         .eq("book_id", bookId)
         .eq("is_active", true);
 
-      if (accessErr) {
-        console.error("Access check error:", accessErr);
-      }
+      if (accessErr) console.error("[DEBUG] Access query error:", accessErr);
 
       const now = new Date();
       
@@ -120,6 +112,7 @@ const BookReader = () => {
           .eq("status", "active")
           .order("created_at", { ascending: false });
 
+        console.log("[DEBUG] Rentals fallback data:", rentalsRows);
         const validR = rentalsRows?.find(r => !r.rental_due_date || new Date(r.rental_due_date) > now);
         if (validR) {
           activeRentalFallback = {
@@ -130,22 +123,17 @@ const BookReader = () => {
       }
 
       const finalAccess = validAccess || activeRentalFallback;
+      console.log("[DEBUG] Final resolved access:", finalAccess);
 
       if (!finalAccess && !previewMode) {
-        setError("no_access");
+        // Find any expired rental to show a better message
+        const isExpired = accessRows?.some(r => r.access_type === 'rental' && r.expires_at && new Date(r.expires_at) < now);
+        setError(isExpired ? "expired" : "no_access");
         setLoading(false);
         return;
       }
 
       setAccess(finalAccess);
-
-      if (!validAccess && !previewMode) {
-        setError(hasPastRental ? "expired" : "no_access");
-        setLoading(false);
-        return;
-      }
-
-      setAccess(validAccess);
       setLoading(false);
     };
 
