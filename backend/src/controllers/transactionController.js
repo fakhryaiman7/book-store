@@ -8,75 +8,76 @@ const checkout = async (req, res) => {
     return res.status(400).json({ success: false, message: "Cart is empty" });
   }
 
-  console.log(`Processing checkout for User: ${userId}, Items: ${items.length}`);
+  // --- Helper: RPC Retry Mechanism ---
+  const retryRPC = async (fnName, params, retries = 2) => {
+    let lastError;
+    for (let i = 0; i <= retries; i++) {
+      try {
+        const { data, error } = await supabase.rpc(fnName, params);
+        if (error) throw error;
+        if (!data) throw new Error("RPC returned null data unexpectedly");
+        return { data, error: null };
+      } catch (err) {
+        lastError = err;
+        console.warn(`[RETRY] RPC ${fnName} failed (attempt ${i + 1}/${retries + 1}):`, err.message || err);
+        if (i < retries) await new Promise(res => setTimeout(res, 500 * (i + 1))); // Exponential backoff
+      }
+    }
+    return { data: null, error: lastError };
+  };
+
+  // --- Helper: UUID Validation ---
+  const isValidUUID = (id) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
+
+  console.log(`[CHECKOUT] Processing for User: ${userId}, Items: ${items.length}`);
 
   try {
     let lastOrder = null;
 
     for (const item of items) {
-      // Ensure bookId is pulled correctly
       const bookId = item.id || item._id;
       const { accessType, totalPrice, rentDays, pricePerDay } = item;
       const now = new Date();
 
-      if (!bookId) {
-        console.warn("Skipping item with missing ID");
+      // 1. Validation
+      if (!bookId || !isValidUUID(bookId)) {
+        console.warn(`[CHECKOUT] Skipping invalid bookId: ${bookId}`);
         continue;
       }
-
-      // Supabase UUID validation regex
-      // If the ID is not a valid UUID, Postgres will throw a 22P02 error instead of gracefully skipping.
-      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-      if (!uuidRegex.test(bookId)) {
-        console.warn(`Skipping item with invalid UUID format: ${bookId}`);
-        continue;
+      if (!userId || !isValidUUID(userId)) {
+        throw new Error(`Invalid User ID format: ${userId}`);
       }
 
       const isRental = accessType === "rent" || accessType === "rental";
 
       if (isRental) {
-        // --- RENTAL FLOW ---
+        // --- ATOMIC RENTAL FLOW VIA RPC ---
         const dueDate = new Date();
         dueDate.setDate(dueDate.getDate() + (parseInt(rentDays) || 1));
 
-        // 1. Create Rental Record
-        const { data: rental, error: rentalErr } = await supabase
-          .from("rentals")
-          .insert([{
-            user_id: userId,
-            book_id: bookId,
-            rental_days: parseInt(rentDays) || 1,
-            rental_price_per_day: parseFloat(pricePerDay || 0),
-            total_rental_cost: parseFloat(totalPrice || 0),
-            rental_start_date: now.toISOString(),
-            rental_due_date: dueDate.toISOString(),
-            status: "active",
-          }])
-          .select()
-          .single();
+        console.log(`[CHECKOUT] Initiating atomic rental RPC for Book: ${bookId}`);
+        
+        const { data: rental, error: rentalErr } = await retryRPC("create_rental_with_access", {
+          p_user_id: userId,
+          p_book_id: bookId,
+          p_rental_days: parseInt(rentDays) || 1,
+          p_price_per_day: parseFloat(pricePerDay || 0),
+          p_total_cost: parseFloat(totalPrice || 0),
+          p_start_date: now.toISOString(),
+          p_due_date: dueDate.toISOString()
+        });
 
-        if (rentalErr) throw new Error(`Rental DB Error: ${rentalErr.message || JSON.stringify(rentalErr)}`);
-        if (!rental || !rental.id) throw new Error(`Rental DB Error: Insert succeeded but no rental ID was returned. Check RLS policies.`);
+        if (rentalErr) {
+           console.error(`[FATAL] RPC create_rental_with_access failed:`, rentalErr);
+           throw new Error(`Checkout failed: ${rentalErr.message || "Atomic transaction error"}`);
+        }
 
-        // 2. Grant Access
-        // Note: rental_id is intentionally omitted — it's nullable and causes FK constraint
-        // failures in serverless contexts. The rental itself is tracked in the rentals table.
-        const { error: accessErr } = await supabase
-          .from("user_book_access")
-          .upsert([{
-            user_id: userId,
-            book_id: bookId,
-            access_type: "rental",
-            expires_at: dueDate.toISOString(),
-            is_active: true,
-            granted_at: now.toISOString(),
-          }], { onConflict: "user_id,book_id,access_type" });
-
-        if (accessErr) throw new Error(`Access DB Error (Rental): ${accessErr.message || JSON.stringify(accessErr)}`);
+        console.log(`[CHECKOUT] Rental created successfully: ${rental.rental_id}`);
 
       } else {
         // --- PURCHASE FLOW ---
-        // 1. Create Order
+        // Note: For full production parity, purchase could also be moved to RPC.
+        // For now, we apply the same strict checks and logging.
         const { data: order, error: orderErr } = await supabase
           .from("orders")
           .insert([{
@@ -92,7 +93,6 @@ const checkout = async (req, res) => {
         if (orderErr) throw new Error(`Order DB Error: ${orderErr.message || JSON.stringify(orderErr)}`);
         lastOrder = order;
 
-        // 2. Grant Permanent Access
         const { error: accessErr } = await supabase
           .from("user_book_access")
           .upsert([{
@@ -107,19 +107,17 @@ const checkout = async (req, res) => {
         if (accessErr) throw new Error(`Access DB Error (Purchase): ${accessErr.message || JSON.stringify(accessErr)}`);
       }
 
-      // 3. Decrement Stock
+      // 3. Decrement Stock (Non-blocking)
       try {
         const { data: bData, error: stockFetchErr } = await supabase.from("books").select("count_in_stock").eq("id", bookId).single();
         if (bData && bData.count_in_stock > 0 && !stockFetchErr) {
           const { error: updateErr } = await supabase.from("books").update({ count_in_stock: bData.count_in_stock - 1 }).eq("id", bookId);
-          if (updateErr) console.warn("Stock update warning:", updateErr.message);
+          if (updateErr) console.warn("[STOCK] Update warning:", updateErr.message);
         }
       } catch (stockErr) {
-        console.warn("Stock fetch/update failed (non-critical):", stockErr?.message || stockErr);
+        console.warn("[STOCK] Fetch/Update failed:", stockErr?.message || stockErr);
       }
     }
-
-    console.log("Checkout completed successfully for user:", userId);
 
     res.status(200).json({
       success: true,
@@ -128,15 +126,11 @@ const checkout = async (req, res) => {
     });
 
   } catch (err) {
-    console.error("FATAL Checkout Error:", err);
-    
-    // Create a clear, stringified error message to ensure it is correctly passed to JSON
-    const errorMessage = err?.message || (typeof err === "string" ? err : JSON.stringify(err));
-    
+    console.error("[FATAL] Checkout Process Error:", err);
     res.status(500).json({ 
       success: false, 
       message: "Checkout failed at the database level.",
-      error: errorMessage,
+      error: err.message || "An unexpected error occurred during checkout"
     });
   }
 };
