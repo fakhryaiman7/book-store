@@ -1,8 +1,10 @@
 import { useContext, useState } from "react";
+import { createPortal } from "react-dom";
 import { Link, useNavigate } from "react-router-dom";
 import { CartContext } from "../context/CartContext";
 import { AuthContext } from "../context/AuthContext";
 import { supabase } from "../lib/supabase";
+import API from "../api/axios";
 import { useTranslation } from "react-i18next";
 
 const Cart = () => {
@@ -14,101 +16,63 @@ const Cart = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [cardData, setCardData] = useState({ number: "", expiry: "", cvc: "", name: "" });
 
   const formatCurrency = (v) => `${v || 0} ${t("currency")}`;
 
   const subtotal = cartItems.reduce((acc, item) => acc + (item.totalPrice || 0), 0);
 
-  const checkoutHandler = async () => {
+  const handleStartPayment = async () => {
+    window.alert("DEBUG: Payment button clicked! Opening modal...");
     if (!user) { navigate("/login?redirect=cart"); return; }
-    setLoading(true); setError(null);
+    
+    // 1. Show simulated 'Contacting Bank' phase
+    setLoading(true);
+    setError(null);
+    
+    // Wait 2 seconds to simulate bank verification
+    setTimeout(() => {
+      setLoading(false);
+      setShowPaymentModal(true);
+    }, 2000);
+  };
+
+  const checkoutHandler = async () => {
+    setShowPaymentModal(false);
+    setLoading(true); 
+    setError(null);
 
     try {
-      for (const item of cartItems) {
-        const bookId = item.id || item._id;
-        const isRental = item.accessType === "rent" || item.accessType === "rental";
-        const isPurchase = item.accessType === "buy" || item.accessType === "purchase";
-        const totalCost = item.totalPrice || 0;
-        const now = new Date();
-        const authUserId = user?.id || user?._id;
+      // 1. Prepare items for the backend
+      const checkoutItems = cartItems.map(item => ({
+        id: item.id || item._id,
+        accessType: item.accessType,
+        totalPrice: item.totalPrice,
+        rentDays: item.rentDays,
+        pricePerDay: item.pricePerDay
+      }));
 
-        if (!authUserId) throw new Error("Invalid user authentication session. Please log in again.");
+      // 2. Call the SECURE backend endpoint
+      const { data } = await API.post("/api/transactions/checkout", {
+        items: checkoutItems,
+        paymentMethod: cardData // Sending mock card data to the backend
+      });
 
-        if (isRental) {
-          // --- RENTAL flow ---
-          const rentDays = item.rentDays || 1;
-          const dueDate = new Date(now);
-          dueDate.setDate(dueDate.getDate() + rentDays);
-
-          // Insert rental record
-          const { data: rental, error: rentalErr } = await supabase
-            .from("rentals")
-            .insert([{
-              user_id: authUserId,
-              book_id: bookId,
-              rental_days: rentDays,
-              rental_price_per_day: parseFloat(item.pricePerDay || item.price_per_day || 0),
-              total_rental_cost: totalCost,
-              rental_start_date: now.toISOString(),
-              rental_due_date: dueDate.toISOString(),
-              status: "active",
-            }])
-            .select()
-            .single();
-
-          if (rentalErr) throw new Error("Rental failed: " + rentalErr.message);
-
-          // Grant rental access in user_book_access
-          await supabase.from("user_book_access").upsert([{
-            user_id: authUserId,
-            book_id: bookId,
-            access_type: "rental",
-            expires_at: dueDate.toISOString(),
-            is_active: true,
-            rental_id: rental.id,
-            granted_at: now.toISOString(),
-          }], { onConflict: "user_id,book_id,access_type" });
-
-          // Decrement stock
-          const { data: bookData } = await supabase.from("books").select("count_in_stock").eq("id", bookId).single();
-          if (bookData) {
-            await supabase.from("books").update({ count_in_stock: Math.max(0, bookData.count_in_stock - 1) }).eq("id", bookId);
-          }
-
-        } else if (isPurchase) {
-          // --- PURCHASE flow ---
-          const { error: orderErr } = await supabase.from("orders").insert([{
-            user_id: authUserId,
-            total_amount: totalCost,
-            payment_status: "paid",
-            order_status: "completed",
-          }]).select().single();
-
-          if (orderErr) throw new Error("Order recording failed: " + orderErr.message);
-
-          // Grant permanent purchase access
-          await supabase.from("user_book_access").upsert([{
-            user_id: authUserId,
-            book_id: bookId,
-            access_type: "purchase",
-            expires_at: null, // permanent
-            is_active: true,
-            granted_at: now.toISOString(),
-          }], { onConflict: "user_id,book_id,access_type" });
-
-          // Decrement stock
-          const { data: bookData } = await supabase.from("books").select("count_in_stock").eq("id", bookId).single();
-          if (bookData) {
-            await supabase.from("books").update({ count_in_stock: Math.max(0, bookData.count_in_stock - 1) }).eq("id", bookId);
-          }
-        }
+      if (data.success) {
+        clearCart();
+        // Final delay for UX
+        setTimeout(() => {
+          setSuccess(true);
+        }, 1500);
       }
-
-      clearCart();
-      setSuccess(true);
     } catch (err) {
-      setError(err.message || "Checkout failed. Please try again.");
-    } finally {
+      console.error("Checkout Failed:", err);
+      setError(
+        err.response?.data?.message || 
+        err.message || 
+        "Checkout failed. Please try again."
+      );
       setLoading(false);
     }
   };
@@ -136,6 +100,11 @@ const Cart = () => {
   return (
     <div className="bg-white dark:bg-gray-950 min-h-screen py-20 px-4 sm:px-6 lg:px-12 transition-colors duration-300">
       <div className="max-w-7xl mx-auto space-y-12">
+        {/* DEBUG BANNER - Remove after confirmation */}
+        <div className="bg-red-600 text-white p-4 rounded-2xl text-center font-black animate-pulse mb-8">
+           🛡️ SECURE CHECKOUT SYSTEM ACTIVE 🛡️
+        </div>
+
         <div className="flex items-center justify-between mb-8 pb-8 border-b border-gray-100 dark:border-gray-800">
           <div>
             <h1 className="text-4xl lg:text-5xl font-black text-gray-900 dark:text-white tracking-tighter mb-2">{t("shopping_cart") || "Shopping Cart"}</h1>
@@ -254,7 +223,7 @@ const Cart = () => {
                 </div>
 
                 <button
-                  onClick={checkoutHandler}
+                  onClick={handleStartPayment}
                   disabled={loading}
                   className={`w-full py-6 rounded-2xl font-black text-xs uppercase tracking-widest shadow-2xl transition-all active:scale-95 flex items-center justify-center gap-4 ${
                     loading ? "bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed shadow-none"
@@ -276,6 +245,100 @@ const Cart = () => {
           </div>
         )}
       </div>
+
+      {/* ── FAKE PAYMENT MODAL (PORTALED) ── */}
+      {showPaymentModal && createPortal(
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-6 bg-black/80 backdrop-blur-sm">
+          <div className="bg-white dark:bg-gray-900 w-full max-w-md rounded-[3rem] p-10 shadow-2xl border border-white/5 relative overflow-hidden">
+            {/* Design accents */}
+            <div className="absolute top-0 right-0 p-8">
+               <div className="w-12 h-12 bg-primary/20 rounded-full blur-xl" />
+            </div>
+
+            <div className="flex justify-between items-center mb-10">
+               <div>
+                  <h3 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight">{t("secure_payment") || "Secure Payment"}</h3>
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{t("enter_card_details") || "Pay with Credit/Debit Card"}</p>
+               </div>
+               <button onClick={() => setShowPaymentModal(false)} className="w-10 h-10 rounded-full bg-gray-50 dark:bg-gray-800 flex items-center justify-center text-gray-400 hover:text-red-500 transition-colors">✕</button>
+            </div>
+
+            {/* Visual Card Card */}
+            <div className="bg-gradient-to-br from-indigo-600 via-primary to-purple-600 rounded-3xl p-8 mb-10 shadow-2xl relative group overflow-hidden">
+               <div className="absolute top-0 right-0 p-6 opacity-40">
+                  <svg className="w-10 h-10" viewBox="0 0 24 24" fill="currentColor text-white"><path d="M21 15.46V19a2 2 0 01-2 2H5a2 2 0 01-2-2v-3.54a2 2 0 01.37-1.16l1.23-1.84A4 4 0 017.86 11h8.28a4 4 0 013.26 1.46l1.23 1.84a2 2 0 01.37 1.16zM12 13a1 1 0 100-2 1 1 0 000 2z"/></svg>
+               </div>
+               
+               <p className="text-white/60 text-[8px] font-black uppercase tracking-widest mb-6">Platinum Rewards Card</p>
+               <p className="text-xl lg:text-2xl font-mono text-white tracking-[0.3em] mb-8 drop-shadow-lg">
+                 {cardData.number || "•••• •••• •••• ••••"}
+               </p>
+               <div className="flex justify-between items-end">
+                  <div>
+                    <p className="text-white/40 text-[7px] font-black uppercase tracking-widest mb-1">{t("cardholder") || "Cardholder Name"}</p>
+                    <p className="text-white text-xs font-bold uppercase tracking-widest truncate">{cardData.name || "YOUR NAME"}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-white/40 text-[7px] font-black uppercase tracking-widest mb-1">{t("expiry") || "Expiry"}</p>
+                    <p className="text-white text-xs font-bold tracking-widest">{cardData.expiry || "MM/YY"}</p>
+                  </div>
+               </div>
+            </div>
+
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <input
+                  type="text"
+                  placeholder="Card Number"
+                  maxLength="19"
+                  className="w-full bg-gray-50 dark:bg-gray-800 border-none rounded-2xl p-5 text-sm font-bold focus:ring-2 ring-primary transition-all dark:text-white"
+                  onChange={(e) => {
+                    let val = e.target.value.replace(/\D/g, '').replace(/(.{4})/g, '$1 ').trim();
+                    setCardData({...cardData, number: val});
+                  }}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <input
+                  type="text"
+                  placeholder="MM/YY"
+                  maxLength="5"
+                  className="w-full bg-gray-50 dark:bg-gray-800 border-none rounded-2xl p-5 text-sm font-bold focus:ring-2 ring-primary transition-all dark:text-white"
+                  onChange={(e) => setCardData({...cardData, expiry: e.target.value})}
+                />
+                <input
+                  type="text"
+                  placeholder="CVC"
+                  maxLength="3"
+                  className="w-full bg-gray-50 dark:bg-gray-800 border-none rounded-2xl p-5 text-sm font-bold focus:ring-2 ring-primary transition-all dark:text-white"
+                  onChange={(e) => setCardData({...cardData, cvc: e.target.value})}
+                />
+              </div>
+
+              <input
+                type="text"
+                placeholder="Cardholder Name"
+                className="w-full bg-gray-50 dark:bg-gray-800 border-none rounded-2xl p-5 text-sm font-bold focus:ring-2 ring-primary transition-all dark:text-white mb-8"
+                onChange={(e) => setCardData({...cardData, name: e.target.value})}
+              />
+
+              <button
+                onClick={checkoutHandler}
+                disabled={cardData.number.length < 16}
+                className={`w-full py-6 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl transition-all active:scale-95 flex items-center justify-center gap-4 ${
+                  cardData.number.length < 16 
+                    ? "bg-gray-100 text-gray-400 cursor-not-allowed" 
+                    : "bg-primary text-white shadow-primary/30 hover:shadow-primary/40"
+                }`}
+              >
+                {t("confirm_and_pay") || "Confirm & Pay"}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 };

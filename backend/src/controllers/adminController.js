@@ -10,6 +10,8 @@ const mapToDb = (fields, userId) => ({
   category: fields.category,
   description: fields.description,
   price_per_day: fields.pricePerDay,
+  purchase_price: fields.purchasePrice || fields.purchase_price,
+  discount_price: fields.discountPrice || fields.discount_price,
   count_in_stock: fields.countInStock,
   user_id: userId
 });
@@ -18,6 +20,8 @@ const mapToClient = (book) => ({
   ...book,
   _id: book.id,
   pricePerDay: book.price_per_day,
+  purchasePrice: book.purchase_price,
+  discountPrice: book.discount_price,
   countInStock: book.count_in_stock
 });
 
@@ -63,6 +67,8 @@ const updateBook = async (req, res) => {
     category: req.body.category || book.category,
     description: req.body.description || book.description,
     price_per_day: req.body.pricePerDay || book.price_per_day,
+    purchase_price: req.body.purchasePrice || req.body.purchase_price || book.purchase_price,
+    discount_price: req.body.discountPrice !== undefined ? req.body.discountPrice : (req.body.discount_price !== undefined ? req.body.discount_price : book.discount_price),
     count_in_stock: req.body.countInStock !== undefined ? req.body.countInStock : book.count_in_stock,
   };
 

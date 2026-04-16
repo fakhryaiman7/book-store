@@ -25,13 +25,14 @@ const MyLibrary = () => {
         .eq("user_id", authUserId)
         .order("created_at", { ascending: false });
 
-      // -- 2. FETCH PENDING PURCHASES --
+      // -- 2. FETCH PURCHASES --
       const { data: ubaData } = await supabase
         .from("user_book_access")
         .select(`*, book:books(*)`)
         .eq("user_id", authUserId)
         .eq("access_type", "purchase")
-        .eq("is_active", true);
+        .eq("is_active", true)
+        .order("granted_at", { ascending: false });
 
       // Merge results
       const now = new Date();
@@ -49,19 +50,20 @@ const MyLibrary = () => {
             ? Math.max(0, Math.ceil((new Date(r.rental_due_date) - now) / (1000 * 60 * 60 * 24))) 
             : null,
           expires_at: r.rental_due_date,
-          created_at: r.created_at
+          created_at: r.created_at || r.granted_at
         });
       });
 
       (ubaData || []).forEach(a => {
-        if (!a.book) return;
+        // Fallback for missing book join (helps debug ID mismatches)
+        const bookData = a.book || { title: "Unknown Book", author: "ID: " + a.book_id };
         merged.push({
           id: a.id,
           access_type: "purchase",
-          book: a.book,
+          book: bookData,
           isExpired: false,
           daysLeft: null,
-          created_at: a.created_at
+          created_at: a.created_at || a.granted_at
         });
       });
 

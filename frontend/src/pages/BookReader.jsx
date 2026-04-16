@@ -193,19 +193,39 @@ const BookReader = () => {
   const reactReaderThemeDict = {
     light: {
       "body": { ...baseReaderStyles, background: '#ffffff', color: '#1a1a1a' },
-      "p": { fontSize: "20px !important", lineHeight: "1.8 !important", marginBottom: "1.5em !important" },
+      "p": { 
+        fontSize: `${settings.fontSize}px !important`, 
+        lineHeight: `${settings.lineHeight} !important`, 
+        marginBottom: "1.5em !important",
+        maxWidth: `${settings.readingWidth}px !important`,
+        margin: "0 auto 1.5em auto !important"
+      },
+      "span": { fontSize: "inherit !important", lineHeight: "inherit !important" },
       "h1, h2, h3": { fontFamily: "'Outfit', sans-serif !important", fontWeight: "800 !important", marginTop: "2em !important", marginBottom: "1em !important" }
     },
     dark: {
       "body": { ...baseReaderStyles, background: '#0F1115', color: '#E6E6E6' },
-      "p": { fontSize: "20px !important", lineHeight: "1.8 !important", marginBottom: "1.5em !important" },
+      "p": { 
+        fontSize: `${settings.fontSize}px !important`, 
+        lineHeight: `${settings.lineHeight} !important`, 
+        marginBottom: "1.5em !important",
+        maxWidth: `${settings.readingWidth}px !important`,
+        margin: "0 auto 1.5em auto !important"
+      },
+      "span": { color: '#E6E6E6 !important', fontSize: "inherit !important", lineHeight: "inherit !important" },
       "h1, h2, h3": { fontFamily: "'Outfit', sans-serif !important", fontWeight: "800 !important", marginTop: "2em !important", marginBottom: "1em !important" },
-      "a": { color: '#60a5fa !important' },
-      "span": { color: '#E6E6E6 !important' }
+      "a": { color: '#60a5fa !important' }
     },
     sepia: {
       "body": { ...baseReaderStyles, background: '#f4ecd8', color: '#5B4636' },
-      "p": { fontSize: "20px !important", lineHeight: "1.8 !important", marginBottom: "1.5em !important" },
+      "p": { 
+        fontSize: `${settings.fontSize}px !important`, 
+        lineHeight: `${settings.lineHeight} !important`, 
+        marginBottom: "1.5em !important",
+        maxWidth: `${settings.readingWidth}px !important`,
+        margin: "0 auto 1.5em auto !important"
+      },
+      "span": { fontSize: "inherit !important", lineHeight: "inherit !important" },
       "h1, h2, h3": { fontFamily: "'Outfit', sans-serif !important", fontWeight: "800 !important", marginTop: "2em !important", marginBottom: "1em !important" }
     }
   };
@@ -229,16 +249,35 @@ const BookReader = () => {
     };
   }, []);
 
-  // Update EPUB theme when it changes reactively
+  // Force update the rendition when settings or theme change
   useEffect(() => {
     if (renditionRef.current) {
+      const rendition = renditionRef.current;
       try {
-        renditionRef.current.themes.select(readerTheme);
+        // 1. Re-register themes with new settings
+        rendition.themes.register("light", reactReaderThemeDict.light);
+        rendition.themes.register("sepia", reactReaderThemeDict.sepia);
+        rendition.themes.register("dark", reactReaderThemeDict.dark);
+        
+        // 2. Select the theme
+        rendition.themes.select(readerTheme);
+        
+        // 3. Directly override font size and line height (more reliable)
+        rendition.themes.fontSize(`${settings.fontSize}px`);
+        rendition.themes.override('body', {
+          'line-height': `${settings.lineHeight} !important`,
+          'font-family': "'Merriweather', 'Georgia', serif !important"
+        });
+        rendition.themes.override('p', {
+          'line-height': `${settings.lineHeight} !important`,
+          'font-size': `${settings.fontSize}px !important`,
+          'margin-bottom': '1.5em !important'
+        });
       } catch (err) {
-        console.warn("Could not update rendition theme:", err);
+        console.warn("Could not apply reader settings:", err);
       }
     }
-  }, [readerTheme]);
+  }, [settings, readerTheme, renditionRef]);
 
   const s = themeStyles[readerTheme];
 
@@ -802,7 +841,16 @@ const BookReader = () => {
         {/* ── Case 1: EPUB file (React Reader) ── */}
         {isEpub && !isExternalRead && bookFileUrl && (
           <div className={`flex-1 relative animate-in fade-in duration-700 ${s.wrapper} ${isPreview ? "max-h-[850px] overflow-hidden preview-lockdown" : "h-[calc(100vh-65px)]"}`}>
-              <div className={`absolute inset-0 z-10 ${s.wrapper} ${isPreview ? "pointer-events-none select-none" : ""}`}>
+              <div 
+                className={`absolute inset-0 z-10 ${s.wrapper} ${isPreview ? "pointer-events-none select-none" : ""} transition-all duration-500`}
+                style={{ 
+                  maxWidth: isPreview ? '100%' : `${settings.readingWidth}px`, 
+                  margin: '0 auto',
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  width: '100%'
+                }}
+              >
                 <ReactReader
                   key={`${readerTheme}-${settings.fontSize}-${settings.lineHeight}-${settings.readingWidth}`}
                   url={bookFileUrl}

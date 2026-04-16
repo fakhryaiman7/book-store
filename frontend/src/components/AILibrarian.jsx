@@ -109,13 +109,17 @@ const AILibrarian = ({ allBooks }) => {
 
   const normalize = (str) => {
     if (!str) return "";
-    let normalized = str.toLowerCase().replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, "").trim();
+    // Remove special characters but keep spaces for better multi-word matching
+    let normalized = str.toLowerCase().replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, " ").trim();
+    // Normalize Arabic
     normalized = normalized.replace(/[أإآ]/g, "ا").replace(/ة/g, "ه").replace(/ى/g, "ي");
+    // Remove "al" prefix from Arabic words if they are long enough
     if (normalized.startsWith("ال") && normalized.length > 4) normalized = normalized.substring(2);
-    return normalized;
+    return normalized.replace(/\s+/g, " "); // Collapse multiple spaces
   };
 
   const calculateScore = (book, userKeywords) => {
+    if (!book) return 0;
     let score = 0;
     const title = normalize(book.title);
     const author = normalize(book.author);
@@ -123,22 +127,29 @@ const AILibrarian = ({ allBooks }) => {
     const description = normalize(book.description);
 
     userKeywords.forEach((word) => {
-      if (title.includes(word)) score += 10;
-      if (author.includes(word)) score += 8;
-      if (category.includes(word)) score += 12;
-      
-      let intent = INTENT_MAP[word];
+      const nWord = normalize(word);
+      if (!nWord || nWord.length < 2) return;
+
+      // Direct matches (Highest weight)
+      if (title.includes(nWord)) score += 15;
+      if (category.includes(nWord)) score += 20;
+      if (author.includes(nWord)) score += 10;
+      if (description.includes(nWord)) score += 5;
+
+      // Intent Mapping
+      let intent = INTENT_MAP[nWord];
       if (intent) {
         const keywords = Array.isArray(intent) ? intent : (INTENT_MAP[intent] || []);
         keywords.forEach(kw => {
           const nkw = normalize(kw);
-          if (title.includes(nkw)) score += 5;
-          if (category.includes(nkw)) score += 8;
-          if (description.includes(nkw)) score += 3;
+          if (title.includes(nkw)) score += 8;
+          if (category.includes(nkw) || nkw.includes(category)) score += 12;
+          if (description.includes(nkw)) score += 4;
         });
       }
-      if (description.includes(word)) score += 2;
     });
+
+    // Bonus for recent books or specific flags if needed
     return score;
   };
 
@@ -158,9 +169,16 @@ const AILibrarian = ({ allBooks }) => {
         .sort((a, b) => b.aiScore - a.aiScore)
         .slice(0, 5);
 
+      let content = t("no_results");
+      if (allBooks.length === 0) {
+        content = isRtl ? "يبدو أن قائمة الكتب فارغة حالياً. هل قمت باستيراد أي كتب؟ أو ربما تحتاج لتحديث الصفحة." : "It seems the book list is currently empty. Have you imported any books? Or maybe you need to refresh the page.";
+      } else if (scored.length > 0) {
+        content = t("ai_match_msg");
+      }
+
       setMessages(prev => [...prev, { 
         type: 'ai', 
-        content: scored.length > 0 ? t("ai_match_msg") : t("no_results"), 
+        content, 
         results: scored 
       }]);
       setIsSearching(false);

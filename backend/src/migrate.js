@@ -42,12 +42,38 @@ Please open your Supabase project's SQL Editor at:
 And run the following SQL:
 
 ------- COPY BELOW -------
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 ALTER TABLE books ADD COLUMN IF NOT EXISTS book_file_url TEXT;
 ALTER TABLE books ADD COLUMN IF NOT EXISTS preview_file_url TEXT;
 ALTER TABLE books ADD COLUMN IF NOT EXISTS rental_price DECIMAL(10,2) DEFAULT 0.00;
+ALTER TABLE books ADD COLUMN IF NOT EXISTS discount_price DECIMAL(10,2);
 UPDATE books SET rental_price = price_per_day WHERE rental_price = 0 OR rental_price IS NULL;
-UPDATE books SET purchase_price = price_per_day * 10 WHERE purchase_price = 0 OR purchase_price IS NULL;
+UPDATE books SET purchase_price = COALESCE(purchase_price, price_per_day * 10) WHERE purchase_price = 0 OR purchase_price IS NULL;
+
+CREATE TABLE IF NOT EXISTS rentals (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  book_id UUID NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+  rental_days INTEGER NOT NULL,
+  rental_price_per_day DECIMAL(10,2) NOT NULL,
+  total_rental_cost DECIMAL(10,2) NOT NULL,
+  rental_start_date TIMESTAMPTZ DEFAULT NOW(),
+  rental_due_date TIMESTAMPTZ NOT NULL,
+  return_date TIMESTAMPTZ,
+  status VARCHAR(20) DEFAULT 'active',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS orders (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  total_amount DECIMAL(10,2) NOT NULL,
+  payment_status VARCHAR(20) DEFAULT 'pending',
+  order_status VARCHAR(20) DEFAULT 'pending',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
 
 CREATE TABLE IF NOT EXISTS user_book_access (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
@@ -58,7 +84,8 @@ CREATE TABLE IF NOT EXISTS user_book_access (
   expires_at TIMESTAMPTZ,
   is_active BOOLEAN DEFAULT TRUE,
   rental_id UUID REFERENCES rentals(id) ON DELETE SET NULL,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(user_id, book_id, access_type)
 );
 
 ------- COPY ABOVE -------

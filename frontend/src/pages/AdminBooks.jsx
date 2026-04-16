@@ -61,8 +61,13 @@ const AdminBooks = () => {
 
   const fetchBooks = async () => {
     setLoading(true);
-    const { data, error } = await supabase.from("books").select("*").order("created_at", { ascending: false });
-    if (!error) setBooks(data || []);
+    const { data, error: fetchError } = await supabase.from("books").select("*").order("created_at", { ascending: false });
+    if (fetchError) {
+      setError(fetchError.message);
+    } else {
+      setBooks(data || []);
+      setError(null);
+    }
     setLoading(false);
   };
 

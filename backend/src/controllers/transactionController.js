@@ -1,132 +1,112 @@
 import { supabase } from "../config/supabase.js";
 
-// Helper to map transaction fields back to what frontend expects
-const mapToClient = (tx) => {
-  if (!tx) return null;
-  return {
-    ...tx,
-    _id: tx.id,
-    bookId: tx.book_id,
-    rentalStartDate: tx.rental_start_date,
-    rentalEndDate: tx.rental_end_date,
-    totalPrice: tx.total_price,
-    isReturned: tx.is_returned
-  };
-};
-
-// @desc    Create new transaction
-// @route   POST /api/transactions
+// @desc    Process a full checkout (multi-item)
+// @route   POST /api/transactions/checkout
 // @access  Private
-const addTransactionItems = async (req, res) => {
-  const { bookId, rentalStartDate, rentalEndDate, totalPrice } = req.body;
+const checkout = async (req, res) => {
+  const { items, paymentMethod } = req.body;
+  const userId = req.user._id;
 
-  if (!bookId) {
+  if (!items || items.length === 0) {
     res.status(400);
-    throw new Error("No book selected");
+    throw new Error("No items in cart");
   }
 
-  // 1. Fetch book to verify stock
-  const { data: book, error: bookError } = await supabase
-    .from("books")
-    .select("*")
-    .eq("id", bookId)
-    .single();
+  try {
+    const results = [];
+    const now = new Date();
 
-  if (bookError || !book) {
-    res.status(404);
-    throw new Error("Book not found");
-  }
+    // 1. Create a Primary Order Record
+    const totalOrderAmount = items.reduce((acc, item) => acc + (item.totalPrice || 0), 0);
+    const { data: order, error: orderErr } = await supabase
+      .from("orders")
+      .insert([{
+        user_id: userId,
+        total_amount: totalOrderAmount,
+        payment_status: "paid", // Mocked as paid
+        order_status: "completed",
+      }])
+      .select()
+      .single();
 
-  if (book.count_in_stock <= 0) {
-    res.status(400);
-    throw new Error("Book is out of stock");
-  }
+    if (orderErr) throw new Error("Backend Order creation failed: " + orderErr.message);
 
-  // 2. Reduce book stock
-  const { error: updateError } = await supabase
-    .from("books")
-    .update({ count_in_stock: book.count_in_stock - 1 })
-    .eq("id", bookId);
+    // 2. Process each item (Rentals vs Purchases)
+    for (const item of items) {
+      const bookId = item.id || item._id;
+      const isRental = item.accessType === "rent" || item.accessType === "rental";
+      const totalCost = item.totalPrice || 0;
 
-  if (updateError) {
-    res.status(500);
-    throw new Error("Failed to update stock");
-  }
+      // Handle Rental
+      if (isRental) {
+        const rentDays = item.rentDays || 1;
+        const dueDate = new Date();
+        dueDate.setDate(dueDate.getDate() + rentDays);
 
-  // 3. Create transaction
-  const { data: transaction, error: txError } = await supabase
-    .from("transactions")
-    .insert([
-      {
-        user_id: req.user._id,
-        book_id: bookId,
-        rental_start_date: rentalStartDate,
-        rental_end_date: rentalEndDate,
-        total_price: totalPrice,
-        is_returned: false
+        const { data: rental, error: rentalErr } = await supabase.from("rentals").insert([{
+          user_id: userId,
+          book_id: bookId,
+          rental_days: rentDays,
+          rental_price_per_day: parseFloat(item.pricePerDay || 0),
+          total_rental_cost: totalCost,
+          rental_start_date: now.toISOString(),
+          rental_due_date: dueDate.toISOString(),
+          status: "active",
+        }]).select().single();
+
+        if (rentalErr) throw new Error(`Rental failed for ${bookId}: ${rentalErr.message}`);
+
+        // Grant Access
+        await supabase.from("user_book_access").upsert([{
+          user_id: userId,
+          book_id: bookId,
+          access_type: "rental",
+          expires_at: dueDate.toISOString(),
+          is_active: true,
+          rental_id: rental.id,
+        }], { onConflict: "user_id,book_id,access_type" });
+
+      } else {
+        // Handle Purchase
+        const { error: accessErr } = await supabase.from("user_book_access").upsert([{
+          user_id: userId,
+          book_id: bookId,
+          access_type: "purchase",
+          expires_at: null,
+          is_active: true,
+        }], { onConflict: "user_id,book_id,access_type" });
+
+        if (accessErr) throw new Error(`Purchase access failed for ${bookId}: ${accessErr.message}`);
       }
-    ])
-    .select()
-    .single();
 
-  if (txError) {
+      // 3. Decrement Stock
+      const { data: book } = await supabase.from("books").select("count_in_stock").eq("id", bookId).single();
+      if (book) {
+        await supabase.from("books").update({ count_in_stock: Math.max(0, book.count_in_stock - 1) }).eq("id", bookId);
+      }
+    }
+
+    res.status(201).json({ success: true, orderId: order.id });
+
+  } catch (error) {
+    console.error("Checkout Error:", error.message);
     res.status(500);
-    throw new Error("Failed to create transaction");
+    throw new Error(error.message);
   }
-
-  res.status(201).json(mapToClient(transaction));
 };
 
-// @desc    Get logged in user transactions
-// @route   GET /api/transactions/mytransactions
-// @access  Private
+// @desc    Get logged in user transactions (simplified)
 const getMyTransactions = async (req, res) => {
-  const { data: transactions, error } = await supabase
-    .from("transactions")
-    .select(`
-      *,
-      book:books(id, title, image, price_per_day)
-    `)
+  const { data: orders, error } = await supabase
+    .from("orders")
+    .select(`*`)
     .eq("user_id", req.user._id);
 
   if (error) {
     res.status(500);
     throw new Error(error.message);
   }
-
-  // Map to client schema with _id and camelCase props
-  res.json(transactions.map(mapToClient));
+  res.json(orders);
 };
 
-// @desc    Get transaction by ID
-// @route   GET /api/transactions/:id
-// @access  Private
-const getTransactionById = async (req, res) => {
-  const { data: transaction, error } = await supabase
-    .from("transactions")
-    .select(`
-      *,
-      user:users(name, email),
-      book:books(title, image)
-    `)
-    .eq("id", req.params.id)
-    .single();
-
-  if (error || !transaction) {
-    res.status(404);
-    throw new Error("Transaction not found");
-  }
-
-  // Only user who made it or admin
-  if (
-    transaction.user_id.toString() === req.user._id.toString() ||
-    req.user.isAdmin
-  ) {
-    res.json(mapToClient(transaction));
-  } else {
-    res.status(401);
-    throw new Error("Not authorized to view this transaction");
-  }
-};
-
-export { addTransactionItems, getMyTransactions, getTransactionById };
+export { checkout, getMyTransactions };
