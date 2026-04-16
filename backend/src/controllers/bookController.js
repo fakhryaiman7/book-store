@@ -52,4 +52,38 @@ const getBookById = async (req, res) => {
   res.json(mapBook(book));
 };
 
-export { getBooks, getBookById };
+// @desc    Get website stats
+// @route   GET /api/books/stats
+// @access  Public
+const getStats = async (req, res) => {
+  try {
+    // 1. Get total books count
+    const { count: booksCount, error: bErr } = await supabase
+      .from("books")
+      .select("*", { count: "exact", head: true });
+
+    // 2. Get total users count (Happy Readers)
+    const { count: usersCount, error: uErr } = await supabase
+      .from("users")
+      .select("*", { count: "exact", head: true });
+
+    // 3. Get unique categories
+    const { data: catData, error: cErr } = await supabase
+      .from("books")
+      .select("category");
+
+    const categories = new Set(catData?.map(b => b.category).filter(Boolean));
+
+    if (bErr || uErr || cErr) throw new Error("Error fetching statistics");
+
+    res.json({
+      booksCount: booksCount || 0,
+      usersCount: usersCount || 0,
+      categoriesCount: categories.size || 0
+    });
+  } catch (err) {
+    res.status(500).json({ status: "error", message: err.message });
+  }
+};
+
+export { getBooks, getBookById, getStats };

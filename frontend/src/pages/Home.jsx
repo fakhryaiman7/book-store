@@ -120,8 +120,24 @@ const Home = () => {
   const [category,    setCategory]    = useState("");
   const [sortBy,      setSortBy]      = useState("default");
   const [page,        setPage]        = useState(1);
+  const [stats,       setStats]       = useState({ booksCount: 0, usersCount: 0, categoriesCount: 0 });
+  const [statsLoading, setStatsLoading] = useState(true);
   /* Parallax Mouse Effect State */
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const { data } = await axios.get("/api/books/stats");
+        setStats(data);
+      } catch (err) {
+        console.error("Error fetching stats:", err);
+      } finally {
+        setStatsLoading(false);
+      }
+    };
+    fetchStats();
+  }, []);
 
   useEffect(() => {
     const handleMouseMove = (e) => {
@@ -224,17 +240,23 @@ const Home = () => {
           {/* Stats Row */}
           <div className="flex flex-wrap justify-center items-center gap-12 sm:gap-20 animate-fade-in delay-500">
              <div className="flex flex-col items-center">
-                <span className="text-4xl sm:text-5xl font-black text-gray-900 dark:text-white tracking-tighter">5K+</span>
+                <span className="text-4xl sm:text-5xl font-black text-gray-900 dark:text-white tracking-tighter">
+                  {statsLoading ? "..." : stats.booksCount >= 1000 ? `${(stats.booksCount / 1000).toFixed(1)}K+` : stats.booksCount}
+                </span>
                 <span className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em] mt-3">📚 {t("books_available")}</span>
              </div>
              <div className="w-px h-12 bg-gray-100 dark:bg-white/10 hidden md:block" />
              <div className="flex flex-col items-center">
-                <span className="text-4xl sm:text-5xl font-black text-gray-900 dark:text-white tracking-tighter">10K+</span>
+                <span className="text-4xl sm:text-5xl font-black text-gray-900 dark:text-white tracking-tighter">
+                  {statsLoading ? "..." : stats.usersCount >= 1000 ? `${(stats.usersCount / 1000).toFixed(1)}K+` : stats.usersCount}
+                </span>
                 <span className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em] mt-3">👥 {t("happy_readers")}</span>
              </div>
              <div className="w-px h-12 bg-gray-100 dark:bg-white/10 hidden md:block" />
              <div className="flex flex-col items-center">
-                <span className="text-4xl sm:text-5xl font-black text-gray-900 dark:text-white tracking-tighter">50+</span>
+                <span className="text-4xl sm:text-5xl font-black text-gray-900 dark:text-white tracking-tighter">
+                  {statsLoading ? "..." : stats.categoriesCount}
+                </span>
                 <span className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em] mt-3">📂 {t("categories_count")}</span>
              </div>
           </div>
