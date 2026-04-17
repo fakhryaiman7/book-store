@@ -195,7 +195,7 @@ const getMyTransactions = async (req, res) => {
 const checkAccess = async (req, res) => {
   try {
     const { bookId } = req.params;
-    const userId = req.user.id;
+    const userId = req.user._id || req.user.id;
 
     // 1. Check unified access table
     const { data: accessData, error: accErr } = await supabase
@@ -237,6 +237,7 @@ const checkAccess = async (req, res) => {
 
     res.json({ hasAccess: false });
   } catch (err) {
+    console.error("[ERROR] checkAccess failed:", err);
     res.status(500).json({ message: err.message });
   }
 };
