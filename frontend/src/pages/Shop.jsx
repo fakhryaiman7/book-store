@@ -456,23 +456,60 @@ const Shop = () => {
         </div>
       </div>
 
-      {/* ── Category Pills ── */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        <div className="flex items-center gap-3 overflow-x-auto pb-4 no-scrollbar">
-          {CATEGORIES.map((cat) => (
-            <button
-              key={cat.value}
-              onClick={() => setCategory(cat.value)}
-              className={`flex items-center gap-2 px-6 py-3 rounded-full text-xs font-black whitespace-nowrap transition-all border-2 ${
-                category === cat.value
-                  ? "bg-primary text-white border-primary shadow-lg shadow-primary/20 scale-105"
-                  : "bg-white dark:bg-gray-900 text-gray-400 dark:text-gray-500 border-gray-100 dark:border-gray-800 hover:border-primary/50"
-              }`}
-            >
-              <span className="text-base">{cat.icon}</span>
-              <span>{cat.label}</span>
-            </button>
-          ))}
+      {/* ── Premium Category Cards ── */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 relative">
+        <h2 className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.3em] mb-6 pl-2">{t("explore_categories") || "Explore Categories"}</h2>
+        <div className="flex items-stretch gap-4 overflow-x-auto pb-8 pt-2 px-2 -mx-2 no-scrollbar snap-x snap-mandatory">
+          {CATEGORIES.map((cat, idx) => {
+            const isActive = category === cat.value;
+            // Define unique energetic gradients for categories
+            const gradients = [
+              "from-blue-600 to-indigo-600",
+              "from-purple-600 to-pink-600",
+              "from-orange-500 to-red-600",
+              "from-emerald-500 to-teal-600",
+              "from-amber-500 to-orange-500",
+              "from-cyan-500 to-blue-500",
+              "from-rose-500 to-pink-600",
+              "from-indigo-500 to-purple-600"
+            ];
+            const bgGrad = gradients[idx % gradients.length];
+
+            return (
+              <button
+                key={cat.value}
+                onClick={() => setCategory(isActive ? "" : cat.value)}
+                className={`snap-center shrink-0 w-32 sm:w-40 relative group flex flex-col items-center justify-center gap-4 p-6 rounded-[2.5rem] transition-all duration-500 outline-none ${
+                  isActive
+                    ? "shadow-2xl shadow-primary/30 scale-105 border-0"
+                    : "bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 hover:shadow-xl hover:border-gray-200 dark:hover:border-gray-700 hover:-translate-y-2"
+                }`}
+              >
+                {/* Active Background */}
+                <div className={`absolute inset-0 bg-gradient-to-br ${bgGrad} transition-opacity duration-500 ${isActive ? 'opacity-100' : 'opacity-0'}`} />
+                
+                {/* Hover Aura */}
+                <div className={`absolute inset-0 bg-gradient-to-br ${bgGrad} opacity-0 group-hover:opacity-5 dark:group-hover:opacity-10 transition-opacity duration-300`} />
+
+                {/* Icon Container */}
+                <div className={`relative z-10 w-14 h-14 rounded-[1.5rem] flex items-center justify-center text-3xl transition-transform duration-500 group-hover:scale-110 group-hover:rotate-6 ${
+                  isActive 
+                    ? "bg-white/20 text-white shadow-inner backdrop-blur-md" 
+                    : "bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 group-hover:bg-white dark:group-hover:bg-gray-700"
+                }`}>
+                  {cat.icon}
+                </div>
+                
+                <span className={`relative z-10 text-[10px] sm:text-[11px] font-black uppercase tracking-widest transition-colors ${
+                  isActive 
+                    ? "text-white" 
+                    : "text-gray-500 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white"
+                }`}>
+                  {cat.label}
+                </span>
+              </button>
+            );
+          })}
         </div>
 
         {/* ── Toolbar ── */}
