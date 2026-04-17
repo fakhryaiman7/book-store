@@ -44,6 +44,8 @@ const BookReader = () => {
   const [progress, setProgress] = useState(0); // 0 to 100
   const [totalPages, setTotalPages] = useState(0);
   const [currentPage, setCurrentPage] = useState(0);
+  const [isBlurred, setIsBlurred] = useState(false);
+  const [isMouseOut, setIsMouseOut] = useState(false);
   const renditionRef = useRef(null);
 
   useEffect(() => {
@@ -148,33 +150,56 @@ const BookReader = () => {
 
   // ─── Content Protection ──────────────────────────────────────────────────
   useEffect(() => {
+    if (access?.access_type !== 'rental') return;
+
     const handleContextMenu = (e) => e.preventDefault();
     const handleKeyDown = (e) => {
-      // Disable: Ctrl+C, Ctrl+S, Ctrl+P, Ctrl+U (view source), F12
+      // Disable: Ctrl+C, Ctrl+S, Ctrl+P, Ctrl+U (view source), F12, PrintScreen
       if (
         (e.ctrlKey && (e.key === 'c' || e.key === 's' || e.key === 'p' || e.key === 'u')) ||
-        e.key === 'F12' || (e.metaKey && e.key === 'p')
+        e.key === 'F12' || (e.metaKey && e.key === 'p') || e.key === 'PrintScreen'
       ) {
         e.preventDefault();
+        if (e.key === 'p' || e.ctrlKey && e.key === 'p') {
+          alert("Printing is disabled for rented content.");
+        }
       }
     };
 
+    const handleBlur = () => setIsBlurred(true);
+    const handleFocus = () => setIsBlurred(false);
+    const handleMouseLeave = () => setIsMouseOut(true);
+    const handleMouseEnter = () => setIsMouseOut(false);
+    const handleDrag = (e) => e.preventDefault();
+
     document.addEventListener('contextmenu', handleContextMenu);
     document.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('blur', handleBlur);
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('mouseleave', handleMouseLeave);
+    document.addEventListener('mouseenter', handleMouseEnter);
+    document.addEventListener('dragstart', handleDrag);
 
     return () => {
       document.removeEventListener('contextmenu', handleContextMenu);
       document.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('blur', handleBlur);
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('mouseleave', handleMouseLeave);
+      document.removeEventListener('mouseenter', handleMouseEnter);
+      document.removeEventListener('dragstart', handleDrag);
     };
-  }, []);
+  }, [access]);
+  }, [access]);
 
   const Watermark = () => {
     if (!user) return null;
-    const items = Array(20).fill(user.email || user.name);
+    const isRental = access?.access_type === 'rental';
+    const items = Array(30).fill(user.email || user.name);
     return (
-      <div className="watermark pointer-events-none fixed inset-0 z-50 flex flex-wrap justify-around align-middle opacity-[0.03] overflow-hidden select-none">
+      <div className={`watermark pointer-events-none fixed inset-0 z-50 flex flex-wrap justify-around align-middle overflow-hidden select-none ${isRental ? 'opacity-[0.1]' : 'opacity-[0.03]'}`}>
         {items.map((text, i) => (
-          <div key={i} className="text-sm font-black uppercase tracking-widest transform -rotate-45 p-20 whitespace-nowrap">
+          <div key={i} className={`text-sm font-black uppercase tracking-widest transform -rotate-45 p-16 whitespace-nowrap ${isRental ? 'text-primary' : ''}`}>
             {text} • PROTECTED CONTENT
           </div>
         ))}
@@ -386,8 +411,17 @@ const BookReader = () => {
 
   const theme = readerTheme; // Local ref for inline template literals
   return (
-    <div className={`min-h-screen flex flex-col transition-colors duration-500 ${s.wrapper} reader-wrapper theme-${readerTheme} protected-content`}>
+    <div className={`min-h-screen flex flex-col transition-colors duration-500 ${s.wrapper} reader-wrapper theme-${readerTheme} protected-content relative`}>
       <Watermark />
+      
+      {/* Security Overlay for Rentals */}
+      {access?.access_type === 'rental' && (
+        <div className="security-overlay fixed inset-0 z-[100] bg-black/80 flex flex-col items-center justify-center text-white p-6 text-center backdrop-blur-md">
+           <div className="text-8xl mb-6">🛡️</div>
+           <h2 className="text-3xl font-black uppercase tracking-tighter mb-4">Security Protection Active</h2>
+           <p className="text-gray-400 max-w-md font-medium">Content is hidden to prevent unauthorized capture. Return your cursor to the reader window to continue.</p>
+        </div>
+      )}
 
 
       {/* ── Toolbar ── */}
@@ -1210,24 +1244,32 @@ const BookReader = () => {
             </>
           </div>
         )}
-        <style dangerouslySetInnerHTML={{ __html: `
-          @media print {
-            body { display: none !important; }
-            .reader-wrapper { display: none !important; }
-          }
-          
-          .protected-content {
-            user-select: none !important;
-            -webkit-user-select: none !important;
-            -moz-user-select: none !important;
-            -ms-user-select: none !important;
-          }
-          
-          /* Allow iframe but restrict some interactions if possible */
-          .reader-view iframe {
-            pointer-events: auto;
-          }
-        `}} />
+        {access?.access_type === 'rental' && (
+          <style dangerouslySetInnerHTML={{ __html: `
+            @media print {
+              body { display: none !important; }
+              .reader-wrapper { display: none !important; }
+            }
+            
+            .protected-content {
+              user-select: none !important;
+              -webkit-user-select: none !important;
+              -moz-user-select: none !important;
+              -ms-user-select: none !important;
+              filter: ${isBlurred || isMouseOut ? 'blur(50px) brightness(0.2)' : 'none'};
+              transition: filter 0.2s ease;
+            }
+            
+            .security-overlay {
+              display: ${isBlurred || isMouseOut ? 'flex' : 'none'};
+            }
+            
+            /* Allow iframe but restrict some interactions if possible */
+            .reader-view iframe {
+              pointer-events: auto;
+            }
+          `}} />
+        )}
       </div>
     </div>
   );
