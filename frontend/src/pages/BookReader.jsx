@@ -154,15 +154,16 @@ const BookReader = () => {
 
     const handleContextMenu = (e) => e.preventDefault();
     const handleKeyDown = (e) => {
+      // For rentals, any keypress triggers a temporary "Security Blur" to sabotage screenshots
+      setIsBlurred(true);
+      setTimeout(() => setIsBlurred(false), 1500);
+
       // Disable: Ctrl+C, Ctrl+S, Ctrl+P, Ctrl+U (view source), F12, PrintScreen
       if (
         (e.ctrlKey && (e.key === 'c' || e.key === 's' || e.key === 'p' || e.key === 'u')) ||
         e.key === 'F12' || (e.metaKey && e.key === 'p') || e.key === 'PrintScreen'
       ) {
         e.preventDefault();
-        if (e.key === 'p' || e.ctrlKey && e.key === 'p') {
-          alert("Printing is disabled for rented content.");
-        }
       }
     };
 
@@ -195,12 +196,15 @@ const BookReader = () => {
   const Watermark = () => {
     if (!user) return null;
     const isRental = access?.access_type === 'rental';
-    const items = Array(30).fill(user.email || user.name);
+    const items = Array(60).fill(user.email || user.name);
     return (
-      <div className={`watermark pointer-events-none fixed inset-0 z-50 flex flex-wrap justify-around align-middle overflow-hidden select-none ${isRental ? 'opacity-[0.1]' : 'opacity-[0.03]'}`}>
+      <div className={`watermark pointer-events-none fixed inset-0 z-[999999] flex flex-wrap justify-around align-middle overflow-hidden select-none ${isRental ? 'p-4' : ''}`}>
         {items.map((text, i) => (
-          <div key={i} className={`text-sm font-black uppercase tracking-widest transform -rotate-45 p-16 whitespace-nowrap ${isRental ? 'text-primary' : ''}`}>
-            {text} • PROTECTED CONTENT
+          <div key={i} 
+            className={`text-[10px] font-black uppercase tracking-[0.2em] transform -rotate-[30deg] p-8 whitespace-nowrap transition-opacity duration-1000
+              ${isRental ? 'opacity-[0.2] text-primary' : 'opacity-[0.03] text-gray-500'}`}
+          >
+            {text} • AUTHORIZED_READER_{user.id?.slice(0,5)}
           </div>
         ))}
       </div>
