@@ -71,13 +71,9 @@ const BookReader = () => {
       setBook(bookData);
 
       // 2. Comprehensive Access Check (via Secure Backend API)
-      console.log(">>> ACCESS CHECK V4.0 (BYPASS RLS) <<<");
-      
       try {
         const { data: accessRes } = await axios.get(`/api/transactions/check-access/${bookId}`);
         
-        console.log("[DEBUG] API Access Response:", accessRes);
-
         if (accessRes.hasAccess) {
           setAccess(accessRes.access);
         } else if (!previewMode) {
@@ -86,7 +82,6 @@ const BookReader = () => {
           return;
         }
       } catch (err) {
-        console.error("[DEBUG] API Access Check Error:", err);
         if (!previewMode) {
           setError("no_access");
           setLoading(false);
@@ -153,10 +148,9 @@ const BookReader = () => {
 
   // ─── Content Protection ──────────────────────────────────────────────────
   useEffect(() => {
-    // Temporarily disabled for debugging
-    /*
     const handleContextMenu = (e) => e.preventDefault();
     const handleKeyDown = (e) => {
+      // Disable: Ctrl+C, Ctrl+S, Ctrl+P, Ctrl+U (view source), F12
       if (
         (e.ctrlKey && (e.key === 'c' || e.key === 's' || e.key === 'p' || e.key === 'u')) ||
         e.key === 'F12' || (e.metaKey && e.key === 'p')
@@ -172,7 +166,6 @@ const BookReader = () => {
       document.removeEventListener('contextmenu', handleContextMenu);
       document.removeEventListener('keydown', handleKeyDown);
     };
-    */
   }, []);
 
   const Watermark = () => {
