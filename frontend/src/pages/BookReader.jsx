@@ -193,22 +193,6 @@ const BookReader = () => {
   }, [access]);
   }, [access]);
 
-  const Watermark = () => {
-    if (!user) return null;
-    const isRental = access?.access_type === 'rental';
-    const items = Array(60).fill(user.email || user.name);
-    return (
-      <div className={`watermark pointer-events-none fixed inset-0 z-[999999] flex flex-wrap justify-around align-middle overflow-hidden select-none ${isRental ? 'p-4' : ''}`}>
-        {items.map((text, i) => (
-          <div key={i} 
-            className={`text-[10px] font-black uppercase tracking-[0.2em] transform -rotate-[30deg] p-8 whitespace-nowrap transition-opacity duration-1000
-              ${isRental ? 'opacity-[0.2] text-primary' : 'opacity-[0.03] text-gray-500'}`}
-          >
-            {text} • AUTHORIZED_READER_{user.id?.slice(0,5)}
-          </div>
-        ))}
-      </div>
-    );
   };
 
   // ─── Theme styles ──────────
@@ -416,7 +400,6 @@ const BookReader = () => {
   const theme = readerTheme; // Local ref for inline template literals
   return (
     <div className={`min-h-screen flex flex-col transition-colors duration-500 ${s.wrapper} reader-wrapper theme-${readerTheme} protected-content relative`}>
-      <Watermark />
       
       {/* Security Overlay for Rentals */}
       {access?.access_type === 'rental' && (
