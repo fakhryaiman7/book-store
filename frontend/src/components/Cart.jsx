@@ -234,14 +234,20 @@ const Cart = () => {
 
       {/* ── FAKE PAYMENT MODAL (PORTALED) ── */}
       {showPaymentModal && createPortal(
-        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-6 bg-black/80 backdrop-blur-sm">
-          <div className="bg-white dark:bg-gray-900 w-full max-w-md rounded-[3rem] p-10 shadow-2xl border border-white/5 relative overflow-hidden">
+        <div 
+          className="fixed inset-0 z-[10000] flex items-center justify-center p-6 bg-black/80 backdrop-blur-sm"
+          onClick={() => setShowPaymentModal(false)}
+        >
+          <div 
+            className="bg-white dark:bg-gray-900 w-full max-w-md rounded-[3rem] p-10 shadow-2xl border border-white/5 relative overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
             {/* Design accents */}
-            <div className="absolute top-0 right-0 p-8">
+            <div className="absolute top-0 right-0 p-8 pointer-events-none">
                <div className="w-12 h-12 bg-primary/20 rounded-full blur-xl" />
             </div>
 
-            <div className="flex justify-between items-center mb-10">
+            <div className="flex justify-between items-center mb-10 relative z-10">
                <div>
                   <h3 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight">{t("secure_payment") || "Secure Payment"}</h3>
                   <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{t("enter_card_details") || "Pay with Credit/Debit Card"}</p>
