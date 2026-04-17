@@ -70,74 +70,30 @@ const BookReader = () => {
       if (!bookData) { setError("Book not found."); setLoading(false); return; }
       setBook(bookData);
 
-      // 2. Comprehensive Access Check (Purchases & Rentals)
-      const authUserId = user?.id || user?._id;
-      if (!authUserId) {
-        setError("no_access");
-        setLoading(false);
-        return;
-      }
-
-      console.log("[DEBUG] Checking access for User:", authUserId, "Book:", bookId);
-
-      // Check unified access table (covers both rentals and purchases)
-      const { data: accessRows, error: accessErr } = await supabase
-        .from("user_book_access")
-        .select("*")
-        .eq("user_id", authUserId)
-        .eq("book_id", bookId)
-        .eq("is_active", true);
-
-      if (accessErr) console.error("[DEBUG] Access query error:", accessErr);
-
-      const now = new Date();
+      // 2. Comprehensive Access Check (via Secure Backend API)
+      console.log("[DEBUG] Checking access via API for Book:", bookId);
       
-      // Find valid access (either a purchase or a rental that hasn't expired yet)
-      const validAccess = accessRows?.find(row => {
-        if (row.access_type === 'purchase') return true;
-        if (row.access_type === 'rental') {
-          return !row.expires_at || new Date(row.expires_at) > now;
+      try {
+        const { data: accessRes } = await axios.get(`/api/transactions/check-access/${bookId}`);
+        
+        console.log("[DEBUG] API Access Response:", accessRes);
+
+        if (accessRes.hasAccess) {
+          setAccess(accessRes.access);
+        } else if (!previewMode) {
+          setError("no_access");
+          setLoading(false);
+          return;
         }
-        return false;
-      });
-
-      // Special fallback check for rentals table directly (for extra safety)
-      let activeRentalFallback = null;
-      if (!validAccess) {
-        const { data: rentalsRows } = await supabase
-          .from("rentals")
-          .select("*")
-          .eq("user_id", authUserId)
-          .eq("book_id", bookId)
-          .eq("status", "active")
-          .order("created_at", { ascending: false });
-
-        console.log("[DEBUG] Rentals fallback data:", rentalsRows);
-        const validR = rentalsRows?.find(r => !r.rental_due_date || new Date(r.rental_due_date) > now);
-        if (validR) {
-          activeRentalFallback = {
-            access_type: "rental",
-            expires_at: validR.rental_due_date
-          };
+      } catch (err) {
+        console.error("[DEBUG] API Access Check Error:", err);
+        if (!previewMode) {
+          setError("no_access");
+          setLoading(false);
+          return;
         }
       }
 
-      const finalAccess = validAccess || activeRentalFallback;
-      console.log("[DEBUG] Final resolved access:", finalAccess);
-
-      if (!finalAccess && !previewMode) {
-        // Find any expired rental to show a better message
-        const isExpired = accessRows?.some(r => r.access_type === 'rental' && r.expires_at && new Date(r.expires_at) < now);
-        
-        // ADDED ALERT FOR DEBUGGING
-        alert(`Access Denied!\nUser ID: ${authUserId}\nBook ID: ${bookId}\nRecords found in DB: ${accessRows?.length || 0}`);
-        
-        setError(isExpired ? "expired" : "no_access");
-        setLoading(false);
-        return;
-      }
-
-      setAccess(finalAccess);
       setLoading(false);
     };
 

@@ -189,4 +189,56 @@ const getMyTransactions = async (req, res) => {
   }
 };
 
-export { checkout, getMyTransactions, getMyLibrary };
+// @desc    Check if user has access to a book
+// @route   GET /api/transactions/check-access/:bookId
+// @access  Private
+const checkAccess = async (req, res) => {
+  try {
+    const { bookId } = req.params;
+    const userId = req.user.id;
+
+    // 1. Check unified access table
+    const { data: accessData, error: accErr } = await supabase
+      .from("user_book_access")
+      .select("*")
+      .eq("user_id", userId)
+      .eq("book_id", bookId)
+      .eq("is_active", true);
+
+    if (accErr) throw accErr;
+
+    const now = new Date();
+    const validAccess = accessData?.find(row => {
+      if (row.access_type === 'purchase') return true;
+      if (row.access_type === 'rental') return !row.expires_at || new Date(row.expires_at) > now;
+      return false;
+    });
+
+    if (validAccess) {
+      return res.json({ hasAccess: true, access: validAccess });
+    }
+
+    // 2. Fallback check specifically in rentals
+    const { data: rentalsRows } = await supabase
+      .from("rentals")
+      .select("*")
+      .eq("user_id", userId)
+      .eq("book_id", bookId)
+      .eq("status", "active");
+
+    const activeRental = rentalsRows?.find(r => !r.rental_due_date || new Date(r.rental_due_date) > now);
+
+    if (activeRental) {
+      return res.json({ 
+        hasAccess: true, 
+        access: { access_type: "rental", expires_at: activeRental.rental_due_date } 
+      });
+    }
+
+    res.json({ hasAccess: false });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+export { checkout, checkAccess, getMyTransactions, getMyLibrary };
