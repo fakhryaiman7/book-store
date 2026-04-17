@@ -174,7 +174,6 @@ const BookReader = () => {
     };
     */
   }, []);
-  }, []);
 
   const Watermark = () => {
     if (!user) return null;
