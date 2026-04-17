@@ -137,7 +137,7 @@ const AILibrarian = ({ allBooks }) => {
       if (description.includes(nWord)) score += 5;
 
       // Intent Mapping
-      let intent = INTENT_MAP[nWord];
+      let intent = INTENT_MAP[nWord] || INTENT_MAP[word];
       if (intent) {
         const keywords = Array.isArray(intent) ? intent : (INTENT_MAP[intent] || []);
         keywords.forEach(kw => {
@@ -149,8 +149,36 @@ const AILibrarian = ({ allBooks }) => {
       }
     });
 
-    // Bonus for recent books or specific flags if needed
     return score;
+  };
+
+  const generateResponse = (words, priceCap, count) => {
+    if (count === 0) return isRtl ? "لم أجد كتباً تطابق طلبك تماماً، هل يمكنك توضيح ما تبحث عنه بكلمات أخرى؟ 🤔" : "I couldn't find exactly that. Can you try rephrasing your question? 🤔";
+    
+    let msg = isRtl ? "بحث سريع في أرفف المكتبة... ووجدت هذه الكتب التي تناسب ذوقك! 📚" : "A quick search through the shelves... Here are some books you might love! 📚";
+    
+    // Personality based on intent keywords
+    if (words.some(w => ['رعب','مخيف','رعبة','scary','horror'].includes(w))) {
+       msg = isRtl ? "احترس! لقد أحضرت لك بعض الكتب المرعبة التي ستحبس أنفاسك 👻" : "Beware! I've found some spine-chilling horror books for you 👻";
+    } else if (words.some(w => ['رومانسي','حب','عشق','رومانسيه','romance','love'].includes(w))) {
+       msg = isRtl ? "لقد جهزت لك مجموعة من أروع قصص الحب والرومانسية ❤️" : "I've prepared a collection of the most beautiful romantic stories ❤️";
+    } else if (words.some(w => ['بزنس','اعمال','أعمال','نجاح','business','success'].includes(w))) {
+       msg = isRtl ? "جاهز لبناء إمبراطوريتك؟ إليك أفضل كتب الأعمال والنجاح 💼" : "Ready to build your empire? Here are the best business and success books 💼";
+    } else if (words.some(w => ['تعليم','برمجة','علوم','علم','علمي','خيال','science','scifi'].includes(w))) {
+       msg = isRtl ? "العلم نور! تفضل هذه الكتب الرائعة لتوسيع مداركك 🧠" : "Knowledge is power! Here are some great books for you 🧠";
+    } else if (words.some(w => ['ممتع','كوميدي','ضحك','ترفيه','fun','comedy'].includes(w))) {
+       msg = isRtl ? "دعنا نغير الجو! إليك بعض الكتب الممتعة والمسلية 😂" : "Let's have a laugh! Here are some fun books 😂";
+    }
+
+    if (priceCap !== null) {
+        msg += isRtl ? `\n(وكما طلبت، جميعها بسعر أقل من ${priceCap} جنيه 💸)` : `\n(As requested, all under ${priceCap} EGP 💸)`;
+    }
+
+    if (count < 3 && count > 0 && priceCap === null) {
+        msg += isRtl ? "\n(هذا أفضل ما وجدناه، قائمة حصرية جداً!)" : "\n(This is a very exclusive list!)";
+    }
+
+    return msg;
   };
 
   const handleSearch = (e) => {
@@ -163,17 +191,41 @@ const AILibrarian = ({ allBooks }) => {
     setIsSearching(true);
 
     setTimeout(() => {
-      const words = userMsg.split(/\s+/).map(normalize).filter(w => w.length > 1);
-      const scored = allBooks.map(b => ({ ...b, aiScore: calculateScore(b, words) }))
-        .filter(b => b.aiScore > 0)
-        .sort((a, b) => b.aiScore - a.aiScore)
+      // 1. Extract Price Constraints (e.g. "تحت 50", "اقل من 100", "under 50")
+      let priceCap = null;
+      const priceRegex = /(?:أقل من|اقل من|تحت|بأقل من|ارخص من|أرخص|رخيص|under|less than|cheaper than)\s*(\d+)/i;
+      const priceMatch = userMsg.match(priceRegex);
+      
+      if (priceMatch) {
+         priceCap = parseInt(priceMatch[1], 10);
+      } else if (userMsg.match(/(?:بلاش|مجاني|مجانا|free)/i)) {
+         priceCap = 0; // Handle free books if they exist
+      }
+
+      // Cleanup user msg for semantic matching
+      const rawWords = userMsg.split(/\s+/);
+      const words = rawWords.map(normalize).filter(w => w.length > 1);
+      
+      // 2. Filter by Price
+      let candidates = allBooks;
+      if (priceCap !== null) {
+          candidates = candidates.filter(b => {
+              const p = b.rentalPrice || b.rental_price || b.purchasePrice || b.purchase_price || Infinity;
+              return p <= priceCap;
+          });
+      }
+
+      // 3. Score and Sort
+      const scored = candidates.map(b => ({ ...b, aiScore: calculateScore(b, words) }))
+        .filter(b => b.aiScore > 0 || (priceCap !== null && rawWords.length <= 4)) // If only asked for price, return cheapest regardless of category
+        .sort((a, b) => b.aiScore - a.aiScore || (a.rentalPrice - b.rentalPrice)) // Sort by matching score, then price
         .slice(0, 5);
 
-      let content = t("no_results");
+      let content = "";
       if (allBooks.length === 0) {
-        content = isRtl ? "يبدو أن قائمة الكتب فارغة حالياً. هل قمت باستيراد أي كتب؟ أو ربما تحتاج لتحديث الصفحة." : "It seems the book list is currently empty. Have you imported any books? Or maybe you need to refresh the page.";
-      } else if (scored.length > 0) {
-        content = t("ai_match_msg");
+        content = isRtl ? "يبدو أن مكتبتي فارغة حالياً. يرجى التأكد من استيراد الكتب أولاً." : "My library appears to be empty right now.";
+      } else {
+        content = generateResponse(words, priceCap, scored.length);
       }
 
       setMessages(prev => [...prev, { 
