@@ -71,7 +71,7 @@ const BookReader = () => {
       setBook(bookData);
 
       // 2. Comprehensive Access Check (via Secure Backend API)
-      console.log("[DEBUG] Checking access via API for Book:", bookId);
+      console.log(">>> ACCESS CHECK V4.0 (BYPASS RLS) <<<");
       
       try {
         const { data: accessRes } = await axios.get(`/api/transactions/check-access/${bookId}`);
