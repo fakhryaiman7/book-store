@@ -1,5 +1,6 @@
 import { useState, useEffect, useContext } from "react";
 import { AuthContext } from "../context/AuthContext";
+import axios from "../api/axios";
 import { supabase } from "../lib/supabase";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
@@ -19,15 +20,8 @@ const FavoriteButton = ({ bookId, className = "" }) => {
 
   const checkIfFavorite = async () => {
     try {
-      const { data, error } = await supabase
-        .from("favorites")
-        .select("id")
-        .eq("user_id", user.id)
-        .eq("book_id", bookId)
-        .limit(1);
-
-      if (error) throw error;
-      setIsFavorite(data.length > 0);
+      const { data } = await axios.get(`/api/favorites/check/${bookId}`);
+      setIsFavorite(data.isFavorite);
     } catch (err) {
       console.error("Error checking favorite status:", err);
     }
@@ -45,25 +39,8 @@ const FavoriteButton = ({ bookId, className = "" }) => {
 
     setLoading(true);
     try {
-      if (isFavorite) {
-        // Remove from favorites
-        const { error } = await supabase
-          .from("favorites")
-          .delete()
-          .eq("user_id", user.id)
-          .eq("book_id", bookId);
-
-        if (error) throw error;
-        setIsFavorite(false);
-      } else {
-        // Add to favorites
-        const { error } = await supabase
-          .from("favorites")
-          .insert([{ user_id: user.id, book_id: bookId }]);
-
-        if (error) throw error;
-        setIsFavorite(true);
-      }
+      const { data } = await axios.post(`/api/favorites/toggle/${bookId}`);
+      setIsFavorite(data.isFavorite);
     } catch (err) {
       console.error("Error toggling favorite:", err);
     } finally {

@@ -264,37 +264,33 @@ const BookReader = () => {
     };
   }, []);
 
-  // Force update the rendition when settings or theme change
+  const s = themeStyles[readerTheme];
+
+  // Effect to apply settings dynamically without remounting
   useEffect(() => {
     if (renditionRef.current) {
       const rendition = renditionRef.current;
       try {
-        // 1. Re-register themes with new settings
-        rendition.themes.register("light", reactReaderThemeDict.light);
-        rendition.themes.register("sepia", reactReaderThemeDict.sepia);
-        rendition.themes.register("dark", reactReaderThemeDict.dark);
-        
-        // 2. Select the theme
-        rendition.themes.select(readerTheme);
-        
-        // 3. Directly override font size and line height (more reliable)
+        // Update font size
         rendition.themes.fontSize(`${settings.fontSize}px`);
+        
+        // Update line height and other overrides
         rendition.themes.override('body', {
           'line-height': `${settings.lineHeight} !important`,
           'font-family': "'Merriweather', 'Georgia', serif !important"
         });
         rendition.themes.override('p', {
           'line-height': `${settings.lineHeight} !important`,
-          'font-size': `${settings.fontSize}px !important`,
-          'margin-bottom': '1.5em !important'
+          'font-size': `${settings.fontSize}px !important`
         });
+        
+        // Update theme
+        rendition.themes.select(readerTheme);
       } catch (err) {
-        console.warn("Could not apply reader settings:", err);
+        console.warn("Dynamic style update failed:", err);
       }
     }
   }, [settings, readerTheme, renditionRef]);
-
-  const s = themeStyles[readerTheme];
 
   // ─── Derive file info ─────────────────────────────────────────────────────────
   const sourceFile    = book?.bookFileUrl || book?.book_file_url;
@@ -877,7 +873,6 @@ const BookReader = () => {
                 }}
               >
                 <ReactReader
-                  key={`${readerTheme}-${settings.fontSize}-${settings.lineHeight}-${settings.readingWidth}`}
                   url={bookFileUrl}
                   location={location}
                   locationChanged={(epubcifi) => {
@@ -921,6 +916,13 @@ const BookReader = () => {
                     highlights.forEach(hl => {
                       rendition.annotations.add("highlight", hl.cfiRange, {}, null, "hl", { fill: hl.color || "#FDE047", "fill-opacity": "0.4" });
                     });
+
+                    // Initial styles
+                    rendition.themes.register("light", reactReaderThemeDict.light);
+                    rendition.themes.register("sepia", reactReaderThemeDict.sepia);
+                    rendition.themes.register("dark", reactReaderThemeDict.dark);
+                    rendition.themes.select(readerTheme);
+                    rendition.themes.fontSize(`${settings.fontSize}px`);
                   }}
                 />
              </div>

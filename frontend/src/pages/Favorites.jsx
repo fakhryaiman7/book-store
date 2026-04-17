@@ -1,7 +1,7 @@
 import { useState, useEffect, useContext } from "react";
 import { Link } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
-import { supabase } from "../lib/supabase";
+import axios from "../api/axios";
 import { useTranslation } from "react-i18next";
 import FavoriteButton from "../components/FavoriteButton";
 
@@ -20,17 +20,8 @@ const Favorites = () => {
   const fetchFavorites = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from("favorites")
-        .select(`
-          book_id,
-          books (*)
-        `)
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-      setFavorites(data.map(f => f.books) || []);
+      const { data } = await axios.get("/api/favorites");
+      setFavorites(data || []);
     } catch (err) {
       console.error("Error fetching favorites:", err);
     } finally {
