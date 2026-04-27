@@ -24,14 +24,17 @@ const mapBook = (book) => {
 // @route   GET /api/books
 // @access  Public
 const getBooks = async (req, res) => {
-  const { data: books, error } = await supabase.from("books").select("*");
+  try {
+    const { data: books, error } = await supabase.from("books").select("*");
 
-  if (error) {
-    res.status(500);
-    throw new Error(error.message);
+    if (error) {
+      return res.status(500).json({ message: error.message });
+    }
+
+    res.json(books.map(mapBook));
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
-
-  res.json(books.map(mapBook));
 };
 
 // @desc    Fetch single book

@@ -192,7 +192,8 @@ const getAdminStats = async (req, res) => {
     const { count: usersCount } = await supabase.from("users").select("*", { count: "exact", head: true });
 
     // 5. Debug info
-    const { count: purchasesCount } = await supabase.from("user_book_access").select("*", { count: "exact", head: true }).eq("access_type", "purchase");
+    const { count: purchasesCount, error: pErr } = await supabase.from("user_book_access").select("*", { count: "exact", head: true }).eq("access_type", "purchase");
+    if (pErr) console.warn("Debug info fetch failed:", pErr.message);
 
     res.json({
       totalRevenue,
@@ -263,7 +264,11 @@ const getAdminOrders = async (req, res) => {
         rental_start_date: p.granted_at || p.created_at,
         status: p.is_active ? "active" : "inactive"
       }))
-    ].sort((a, b) => new Date(b.created_at || b.granted_at) - new Date(a.created_at || a.granted_at));
+    ].sort((a, b) => {
+      const dateA = new Date(a.created_at || a.granted_at || 0);
+      const dateB = new Date(b.created_at || b.granted_at || 0);
+      return dateB - dateA;
+    });
 
     res.json(combined);
   } catch (err) {
