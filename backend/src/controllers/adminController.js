@@ -172,9 +172,15 @@ const internalizeFile = async (req, res) => {
 // @access  Private/Admin
 const getAdminStats = async (req, res) => {
   try {
-    // 1. Total Revenue from successful orders
-    const { data: orders } = await supabase.from("orders").select("total_amount").eq("payment_status", "paid");
-    const totalRevenue = orders?.reduce((sum, order) => sum + (parseFloat(order.total_amount) || 0), 0) || 0;
+    // 1. Total Revenue from successful orders and rentals
+    const [ordersResult, rentalsResult] = await Promise.all([
+      supabase.from("orders").select("total_amount").eq("payment_status", "paid"),
+      supabase.from("rentals").select("total_rental_cost")
+    ]);
+
+    const ordersRevenue = ordersResult.data?.reduce((sum, order) => sum + (parseFloat(order.total_amount) || 0), 0) || 0;
+    const rentalsRevenue = rentalsResult.data?.reduce((sum, rental) => sum + (parseFloat(rental.total_rental_cost) || 0), 0) || 0;
+    const totalRevenue = ordersRevenue + rentalsRevenue;
 
     // 2. Active Rentals
     const { count: activeRentals } = await supabase.from("rentals").select("*", { count: "exact", head: true }).eq("status", "active");
@@ -218,14 +224,42 @@ const getAdminUsers = async (req, res) => {
 // @access  Private/Admin
 const getAdminOrders = async (req, res) => {
   try {
+    // 1. Fetch rentals with book and user details
     const { data: rentals, error: rentErr } = await supabase
       .from("rentals")
-      .select("*, book:books(title), user:users(name, email)")
+      .select("*, book:books(title, purchase_price), user:users(name, email)")
       .order("created_at", { ascending: false });
 
     if (rentErr) throw rentErr;
-    res.json(rentals);
+
+    // 2. Fetch purchases from user_book_access with book and user details
+    const { data: purchases, error: purchaseErr } = await supabase
+      .from("user_book_access")
+      .select("*, book:books(title, purchase_price), user:users(name, email)")
+      .eq("access_type", "purchase")
+      .order("created_at", { ascending: false });
+
+    if (purchaseErr) throw purchaseErr;
+
+    // 3. Combine and normalize data
+    // Rentals are already normalized. For purchases, we map fields to match the expected format.
+    const combined = [
+      ...(rentals || []).map(r => ({ 
+        ...r, 
+        access_type: "rental" 
+      })),
+      ...(purchases || []).map(p => ({ 
+        ...p, 
+        access_type: "purchase",
+        total_rental_cost: p.book?.purchase_price || 0, // Purchases show the purchase price as the cost
+        rental_start_date: p.granted_at || p.created_at,
+        status: p.is_active ? "active" : "inactive"
+      }))
+    ].sort((a, b) => new Date(b.created_at || b.granted_at) - new Date(a.created_at || a.granted_at));
+
+    res.json(combined);
   } catch (err) {
+    console.error("getAdminOrders Error:", err);
     res.status(500).json({ message: err.message });
   }
 };

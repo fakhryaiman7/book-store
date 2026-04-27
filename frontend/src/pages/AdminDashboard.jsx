@@ -70,11 +70,16 @@ const AdminDashboard = () => {
     return new Date(d).toLocaleDateString(locale, { month: "short", day: "numeric", year: "numeric" });
   };
 
-  const statusBadge = (rental) => {
+  const statusBadge = (row) => {
+    const isPurchase = row.access_type === "purchase";
+    if (isPurchase) {
+      return <span className="px-2 inline-flex text-[10px] leading-5 font-black uppercase tracking-wider rounded-lg bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-300">{t("filter_purchases") || "Purchase"}</span>;
+    }
+
     const now = new Date();
-    const isOverdue = rental.status === "active" && new Date(rental.rental_due_date) < now;
-    const status = isOverdue ? (t("status_overdue") || "Overdue") : rental.status === "returned" ? (t("status_completed") || "Completed") : (t("status_active") || "Active");
-    const cls = isOverdue ? "bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-300" : rental.status === "returned" ? "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300" : "bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-300";
+    const isOverdue = row.status === "active" && new Date(row.rental_due_date) < now;
+    const status = isOverdue ? (t("status_overdue") || "Overdue") : row.status === "returned" ? (t("status_completed") || "Completed") : (t("status_active") || "Active");
+    const cls = isOverdue ? "bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-300" : row.status === "returned" ? "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300" : "bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-300";
     return <span className={`px-2 inline-flex text-[10px] leading-5 font-black uppercase tracking-wider rounded-lg ${cls}`}>{status}</span>;
   };
 
@@ -153,7 +158,7 @@ const AdminDashboard = () => {
                       <td className="px-8 py-5 whitespace-nowrap text-[11px] font-black text-gray-900 dark:text-white font-mono opacity-60 group-hover:opacity-100 transition-opacity">#{row.id.slice(0, 8).toUpperCase()}</td>
                       <td className="px-8 py-5 whitespace-nowrap text-sm font-bold text-gray-600 dark:text-gray-300">{row.user?.name || "—"}</td>
                       <td className="px-8 py-5 whitespace-nowrap text-sm font-bold text-gray-600 dark:text-gray-300">{row.book?.title || "—"}</td>
-                      <td className="px-8 py-5 whitespace-nowrap text-xs font-medium text-gray-400 dark:text-gray-500">{fmt(row.created_at)}</td>
+                      <td className="px-8 py-5 whitespace-nowrap text-xs font-medium text-gray-400 dark:text-gray-500">{fmt(row.created_at || row.granted_at)}</td>
                       <td className="px-8 py-5 whitespace-nowrap">{statusBadge(row)}</td>
                     </tr>
                   ))

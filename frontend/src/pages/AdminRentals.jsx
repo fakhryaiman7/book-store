@@ -19,16 +19,15 @@ const AdminRentals = () => {
       const now = new Date();
       if (filter === "purchases") {
         result = result.filter(r => r.access_type === "purchase");
-      } else {
+      } else if (filter !== "all") {
+        // For status filters, we only look at rentals
         result = result.filter(r => r.access_type !== "purchase");
-        if (filter !== "all") {
-          if (filter === "overdue") {
-            result = result.filter(r => r.status === "active" && new Date(r.rental_due_date) < now);
-          } else if (filter === "active") {
-            result = result.filter(r => r.status === "active" && new Date(r.rental_due_date) >= now);
-          } else {
-            result = result.filter(r => r.status === filter);
-          }
+        if (filter === "overdue") {
+          result = result.filter(r => r.status === "active" && new Date(r.rental_due_date) < now);
+        } else if (filter === "active") {
+          result = result.filter(r => r.status === "active" && new Date(r.rental_due_date) >= now);
+        } else {
+          result = result.filter(r => r.status === filter);
         }
       }
       
@@ -86,7 +85,7 @@ const AdminRentals = () => {
 
   const counts = { 
     all: rentals.length, 
-    active: rentals.filter(r => r.status === "active").length, 
+    active: rentals.filter(r => r.status === "active" || (r.access_type === "purchase" && r.is_active)).length, 
     overdue: rentals.filter(r => r.status === "overdue").length, 
     returned: rentals.filter(r => r.status === "returned").length 
   };
