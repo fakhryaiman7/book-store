@@ -191,9 +191,6 @@ const BookReader = () => {
       document.removeEventListener('dragstart', handleDrag);
     };
   }, [access]);
-  }, [access]);
-
-  };
 
   // ─── Theme styles ──────────
   const baseReaderStyles = {
