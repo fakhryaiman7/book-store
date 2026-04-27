@@ -191,11 +191,19 @@ const getAdminStats = async (req, res) => {
     // 4. Users Count
     const { count: usersCount } = await supabase.from("users").select("*", { count: "exact", head: true });
 
+    // 5. Debug info
+    const { count: purchasesCount } = await supabase.from("user_book_access").select("*", { count: "exact", head: true }).eq("access_type", "purchase");
+
     res.json({
       totalRevenue,
       activeRentals: activeRentals || 0,
       booksCount: booksCount || 0,
-      usersCount: usersCount || 0
+      usersCount: usersCount || 0,
+      debug: {
+        rentals: activeRentals || 0,
+        purchases: purchasesCount || 0,
+        v: "1.1.0"
+      }
     });
   } catch (err) {
     res.status(500).json({ message: err.message });

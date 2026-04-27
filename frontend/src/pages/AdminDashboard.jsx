@@ -10,7 +10,7 @@ const AdminDashboard = () => {
   const { user } = useContext(AuthContext);
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
-  const [stats, setStats] = useState({ revenue: 0, activeRentals: 0, booksInStock: 0, totalUsers: 0 });
+  const [stats, setStats] = useState({ revenue: 0, activeRentals: 0, booksInStock: 0, totalUsers: 0, v: null });
   const [recentRentals, setRecentRentals] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -28,7 +28,8 @@ const AdminDashboard = () => {
           revenue: s.totalRevenue || 0, 
           activeRentals: s.activeRentals || 0, 
           booksInStock: s.booksCount || 0, 
-          totalUsers: s.usersCount || 0 
+          totalUsers: s.usersCount || 0,
+          v: s.debug?.v || null
         });
         
         // Take the first 5 for recent transactions
@@ -90,7 +91,7 @@ const AdminDashboard = () => {
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
           <div className="animate-in slide-in-from-left duration-500">
             <h1 className="text-4xl font-black text-gray-900 dark:text-white tracking-tight">{t("dashboard_overview") || "Dashboard Overview"}</h1>
-            <p className="text-gray-500 dark:text-gray-400 mt-2 font-medium">{t("welcome_admin") || "Welcome back, Administrator"} <span className="text-primary font-black">{user?.name}</span></p>
+            <p className="text-gray-500 dark:text-gray-400 mt-2 font-medium">{t("welcome_admin") || "Welcome back, Administrator"} <span className="text-primary font-black">{user?.name}</span> {stats.v && <span className="text-[10px] ml-2 opacity-50">Backend: {stats.v}</span>}</p>
           </div>
           <div className="flex flex-wrap gap-4">
             <button 
