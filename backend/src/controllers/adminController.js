@@ -218,7 +218,7 @@ const getAdminUsers = async (req, res) => {
   try {
     const { data: users, error } = await supabase
       .from("users")
-      .select("id, name, email, is_admin, created_at")
+      .select("id, name, first_name, email, is_admin, phone, birth_date, gender, country, province, address, avatar_url, created_at, is_active")
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -292,10 +292,23 @@ const getAdminOrders = async (req, res) => {
 // @access  Private/Admin
 const updateAdminUser = async (req, res) => {
   try {
-    const { name, email, is_admin, is_active, phone } = req.body;
+    const { name, first_name, email, is_admin, is_active, phone, birth_date, gender, country, province, address } = req.body;
     const { data: updatedUser, error } = await supabase
       .from("users")
-      .update({ name, email, is_admin, is_active, phone, updated_at: new Date().toISOString() })
+      .update({ 
+        name, 
+        first_name,
+        email, 
+        is_admin, 
+        is_active, 
+        phone, 
+        birth_date, 
+        gender, 
+        country, 
+        province, 
+        address,
+        updated_at: new Date().toISOString() 
+      })
       .eq("id", req.params.id)
       .select()
       .single();

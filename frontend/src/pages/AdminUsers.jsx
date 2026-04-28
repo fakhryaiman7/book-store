@@ -9,7 +9,19 @@ const AdminUsers = () => {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editId, setEditId] = useState(null);
-  const [form, setForm] = useState({ name: "", email: "", role: "customer", phone: "", is_active: true });
+  const [form, setForm] = useState({ 
+    name: "", 
+    first_name: "",
+    email: "", 
+    role: "customer", 
+    phone: "", 
+    is_active: true,
+    birth_date: "",
+    gender: "",
+    country: "",
+    province: "",
+    address: ""
+  });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
@@ -34,17 +46,44 @@ const AdminUsers = () => {
 
   useEffect(() => { fetchUsers(); }, []);
 
-  const openAdd = () => { setForm({ name: "", email: "", role: "customer", phone: "", is_active: true }); setEditId(null); setError(null); setShowModal(true); };
-  const openEdit = (u) => { setForm({ name: u.name, email: u.email, role: u.role || (u.is_admin ? "admin" : "customer"), phone: u.phone || "", is_active: u.is_active ?? true }); setEditId(u.id); setError(null); setShowModal(true); };
+  const openAdd = () => { 
+    setForm({ 
+      name: "", first_name: "", email: "", role: "customer", phone: "", is_active: true,
+      birth_date: "", gender: "", country: "", province: "", address: ""
+    }); 
+    setEditId(null); setError(null); setShowModal(true); 
+  };
+  const openEdit = (u) => { 
+    setForm({ 
+      name: u.name, 
+      first_name: u.first_name || "",
+      email: u.email, 
+      role: u.role || (u.is_admin ? "admin" : "customer"), 
+      phone: u.phone || "", 
+      is_active: u.is_active ?? true,
+      birth_date: u.birth_date || "",
+      gender: u.gender || "",
+      country: u.country || "",
+      province: u.province || "",
+      address: u.address || ""
+    }); 
+    setEditId(u.id); setError(null); setShowModal(true); 
+  };
 
   const handleSave = async (e) => {
     e.preventDefault(); setSaving(true); setError(null);
     const payload = { 
       name: form.name, 
+      first_name: form.first_name,
       email: form.email, 
       is_admin: form.role === "admin", 
       is_active: form.is_active,
-      phone: form.phone
+      phone: form.phone,
+      birth_date: form.birth_date,
+      gender: form.gender,
+      country: form.country,
+      province: form.province,
+      address: form.address
     };
     
     try {
@@ -123,7 +162,7 @@ const AdminUsers = () => {
               <table className="min-w-full divide-y divide-gray-100 dark:divide-gray-800">
                 <thead className="bg-gray-50/50 dark:bg-gray-800/30">
                   <tr>
-                    {[t("col_name")||"Name", t("col_email")||"Email", t("col_role")||"Role", t("col_phone")||"Phone", t("col_status")||"Status", t("col_joined")||"Joined", t("col_actions")||"Actions"].map((h, i) => (
+                    {[t("col_name")||"Name", t("form_first_name")||"First Name", t("col_email")||"Email", t("col_role")||"Role", t("col_phone")||"Phone", t("form_country")||"Country", t("col_status")||"Status", t("col_joined")||"Joined", t("col_actions")||"Actions"].map((h, i) => (
                       <th key={i} className="px-6 py-4 text-left rtl:text-right text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">{h}</th>
                     ))}
                   </tr>
@@ -139,6 +178,7 @@ const AdminUsers = () => {
                           <span className="text-sm font-bold text-gray-900 dark:text-gray-100">{u.name}</span>
                         </div>
                       </td>
+                      <td className="px-6 py-4 text-sm font-medium text-gray-500 dark:text-gray-400">{u.first_name || "—"}</td>
                       <td className="px-6 py-4 text-sm font-medium text-gray-500 dark:text-gray-400">{u.email}</td>
                       <td className="px-6 py-4">
                         <span className={`text-[10px] font-black px-3 py-1 rounded-lg uppercase tracking-wider ${(u.role === "admin" || u.is_admin) ? "bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400" : "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400"}`}>
@@ -146,6 +186,7 @@ const AdminUsers = () => {
                         </span>
                       </td>
                       <td className="px-6 py-4 text-sm font-medium text-gray-500 dark:text-gray-400">{u.phone || "—"}</td>
+                      <td className="px-6 py-4 text-sm font-medium text-gray-500 dark:text-gray-400">{u.country || "—"}</td>
                       <td className="px-6 py-4">
                         <button onClick={() => toggleActive(u)} className={`text-[10px] font-black px-3 py-1 rounded-lg uppercase tracking-wider transition-all ${u.is_active !== false ? "bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 hover:bg-green-100" : "bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100"}`}>
                           {u.is_active !== false ? t("status_active")||"Active" : t("status_inactive")||"Inactive"}
@@ -180,32 +221,83 @@ const AdminUsers = () => {
             </div>
             <form onSubmit={handleSave} className="p-10 space-y-6">
               {error && <div className="bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 text-red-700 dark:text-red-400 p-4 rounded-xl shadow-sm font-bold text-xs">{error}</div>}
-              <div>
-                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">{t("form_fullname") || "Full Name"}</label>
-                <input required className="w-full bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800 rounded-2xl px-5 py-3.5 text-sm focus:border-primary focus:ring-4 focus:ring-primary/5 outline-none dark:text-white transition-all font-bold"
-                  value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">{t("form_fullname") || "User Name"}</label>
+                  <input required className="w-full bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800 rounded-2xl px-5 py-3 text-sm focus:border-primary focus:ring-4 focus:ring-primary/5 outline-none dark:text-white transition-all font-bold"
+                    value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
+                </div>
+                <div>
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">{t("form_first_name") || "First Name"}</label>
+                  <input className="w-full bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800 rounded-2xl px-5 py-3 text-sm focus:border-primary focus:ring-4 focus:ring-primary/5 outline-none dark:text-white transition-all font-bold"
+                    value={form.first_name} onChange={e => setForm({ ...form, first_name: e.target.value })} />
+                </div>
               </div>
-              <div>
-                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">{t("form_email") || "Email"}</label>
-                <input type="email" required className="w-full bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800 rounded-2xl px-5 py-3.5 text-sm focus:border-primary focus:ring-4 focus:ring-primary/5 outline-none dark:text-white transition-all font-bold"
-                  value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">{t("form_email") || "Email"}</label>
+                  <input type="email" required className="w-full bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800 rounded-2xl px-5 py-3 text-sm focus:border-primary focus:ring-4 focus:ring-primary/5 outline-none dark:text-white transition-all font-bold"
+                    value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
+                </div>
+                <div>
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">{t("form_phone") || "Phone"}</label>
+                  <input className="w-full bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800 rounded-2xl px-5 py-3 text-sm focus:border-primary focus:ring-4 focus:ring-primary/5 outline-none dark:text-white transition-all font-bold"
+                    value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} />
+                </div>
               </div>
-              <div>
-                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">{t("form_phone") || "Phone"}</label>
-                <input className="w-full bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800 rounded-2xl px-5 py-3.5 text-sm focus:border-primary focus:ring-4 focus:ring-primary/5 outline-none dark:text-white transition-all font-bold"
-                  value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} />
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">{t("form_birth_date")}</label>
+                  <input type="date" className="w-full bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800 rounded-2xl px-5 py-3 text-sm focus:border-primary outline-none dark:text-white font-bold"
+                    value={form.birth_date} onChange={e => setForm({ ...form, birth_date: e.target.value })} />
+                </div>
+                <div>
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">{t("form_gender")}</label>
+                  <select className="w-full bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800 rounded-2xl px-5 py-3 text-sm outline-none dark:text-white font-bold"
+                    value={form.gender} onChange={e => setForm({ ...form, gender: e.target.value })}>
+                    <option value="">{t("select")}</option>
+                    <option value="male">{t("gender_male")}</option>
+                    <option value="female">{t("gender_female")}</option>
+                  </select>
+                </div>
               </div>
-              <div>
-                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">{t("form_role") || "Role"}</label>
-                <select required className="w-full bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800 rounded-2xl px-5 py-3.5 text-sm outline-none dark:text-white font-bold appearance-none cursor-pointer"
-                  value={form.role} onChange={e => setForm({ ...form, role: e.target.value })}>
-                  {ROLES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
-                </select>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">{t("form_country")}</label>
+                  <input className="w-full bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800 rounded-2xl px-5 py-3 text-sm focus:border-primary outline-none dark:text-white font-bold"
+                    value={form.country} onChange={e => setForm({ ...form, country: e.target.value })} />
+                </div>
+                <div>
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">{t("form_province")}</label>
+                  <input className="w-full bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800 rounded-2xl px-5 py-3 text-sm focus:border-primary outline-none dark:text-white font-bold"
+                    value={form.province} onChange={e => setForm({ ...form, province: e.target.value })} />
+                </div>
               </div>
-              <label className="flex items-center space-x-3 cursor-pointer group px-2">
-                <input type="checkbox" checked={form.is_active} onChange={e => setForm({ ...form, is_active: e.target.checked })} className="w-5 h-5 accent-primary rounded-lg" />
-                <span className="text-sm font-bold text-gray-600 dark:text-gray-300 group-hover:text-primary transition-colors">{t("status_active") || "Active"}</span>
-              </label>
+
+              <div>
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">{t("form_address")}</label>
+                <textarea className="w-full bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800 rounded-2xl px-5 py-3 text-sm focus:border-primary outline-none dark:text-white font-bold"
+                  value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} rows={2} />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">{t("form_role") || "Role"}</label>
+                  <select required className="w-full bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800 rounded-2xl px-5 py-3 text-sm outline-none dark:text-white font-bold appearance-none cursor-pointer"
+                    value={form.role} onChange={e => setForm({ ...form, role: e.target.value })}>
+                    {ROLES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
+                  </select>
+                </div>
+                <div className="flex items-end pb-2">
+                  <label className="flex items-center space-x-3 cursor-pointer group px-2">
+                    <input type="checkbox" checked={form.is_active} onChange={e => setForm({ ...form, is_active: e.target.checked })} className="w-5 h-5 accent-primary rounded-lg" />
+                    <span className="text-sm font-bold text-gray-600 dark:text-gray-300 group-hover:text-primary transition-colors">{t("status_active") || "Active"}</span>
+                  </label>
+                </div>
+              </div>
               <div className="flex justify-end gap-4 pt-10 border-t dark:border-gray-800">
                 <button type="button" onClick={() => setShowModal(false)} className="px-8 py-4 font-black text-xs uppercase tracking-widest text-gray-400 hover:text-gray-600 transition-colors font-bold">{t("btn_cancel") || "Cancel"}</button>
                 <button type="submit" disabled={saving} className="px-10 py-4 bg-primary text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-primary/20 hover:bg-opacity-90 active:scale-95 disabled:opacity-50 transition-all">
