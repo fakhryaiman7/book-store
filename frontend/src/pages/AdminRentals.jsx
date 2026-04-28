@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import AdminSidebar from "../components/AdminSidebar";
 import { useTranslation } from "react-i18next";
 import axios from "../api/axios";
+import { supabase } from "../lib/supabase";
 
 const AdminRentals = () => {
   const { t, i18n } = useTranslation();
