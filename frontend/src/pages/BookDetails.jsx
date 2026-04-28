@@ -476,6 +476,9 @@ const BookDetails = () => {
                     <span className="ml-auto text-[10px] font-black text-gray-400 uppercase tracking-widest">{new Date(review.created_at).toLocaleDateString()}</span>
                   </div>
                   <p className="text-gray-600 dark:text-gray-400 leading-relaxed pl-16 rtl:pr-16 rtl:pl-0">{review.comment}</p>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>
