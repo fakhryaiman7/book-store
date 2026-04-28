@@ -3,5 +3,8 @@
   "rewrites": [
     { "source": "/api/:path*", "destination": "/api/index.mjs" },
     { "source": "/(.*)", "destination": "/index.html" }
-  ]
+  ],
+  "env": {
+    "BUILD_TIME": "2026-04-28-23-18"
+  }
 }
