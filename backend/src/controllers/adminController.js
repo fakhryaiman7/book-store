@@ -243,61 +243,59 @@ const getAdminUsers = async (req, res) => {
 // @access  Private/Admin
 const getAdminOrders = async (req, res) => {
   try {
-    console.log("Fetching admin orders...");
+    console.log("Fetching admin orders, rentals and purchases...");
     
-    // 1. Fetch rentals with simple JOIN
-    const { data: rentals, error: rentErr } = await supabase
+    // 1. Fetch rentals
+    const { data: rentals } = await supabase
       .from("rentals")
-      .select(`
-        id, created_at, status, rental_days, total_rental_cost, rental_due_date, return_date,
-        book:books(title, purchase_price),
-        user:users(name, email)
-      `)
+      .select("*, book:books(title, purchase_price), user:users(name, email)")
       .order("created_at", { ascending: false });
 
-    // 2. Fetch purchases with simple JOIN
-    const { data: purchases, error: purchaseErr } = await supabase
+    // 2. Fetch purchases from user_book_access
+    const { data: access } = await supabase
       .from("user_book_access")
-      .select(`
-        id, created_at, granted_at, is_active, access_type,
-        book:books(title, purchase_price),
-        user:users(name, email)
-      `)
+      .select("*, book:books(title, purchase_price), user:users(name, email)")
       .eq("access_type", "purchase")
       .order("created_at", { ascending: false });
 
-    // 3. Combine and ensure NO failures on missing joins
+    // 3. Fetch orders (The most likely place for the 419 EGP)
+    const { data: orders } = await supabase
+      .from("orders")
+      .select("*, user:users(name, email)")
+      .order("created_at", { ascending: false });
+
+    // 4. Combine and normalize everything
     const combined = [
       ...(rentals || []).map(r => ({ 
         ...r, 
         access_type: "rental",
-        user: r.user || { name: "Unknown User", email: "" },
-        book: r.book || { title: "Unknown Book", purchase_price: 0 }
+        user: r.user || { name: "Unknown", email: "" },
+        book: r.book || { title: "Unknown", purchase_price: 0 }
       })),
-      ...(purchases || []).map(p => ({ 
-        ...p, 
+      ...(access || []).map(a => ({ 
+        ...a, 
         access_type: "purchase",
-        total_rental_cost: p.book?.purchase_price || 0,
-        rental_start_date: p.granted_at || p.created_at,
-        status: p.is_active ? "active" : "inactive",
-        user: p.user || { name: "Unknown User", email: "" },
-        book: p.book || { title: "Unknown Book", purchase_price: 0 }
+        total_rental_cost: a.book?.purchase_price || 0,
+        rental_start_date: a.granted_at || a.created_at,
+        status: a.is_active ? "active" : "inactive",
+        user: a.user || { name: "Unknown", email: "" },
+        book: a.book || { title: "Unknown", purchase_price: 0 }
+      })),
+      ...(orders || []).map(o => ({
+        ...o,
+        access_type: "purchase",
+        total_rental_cost: o.total_amount || 0,
+        status: o.payment_status === "paid" ? "active" : "inactive",
+        user: o.user || { name: "Unknown", email: "" },
+        book: { title: o.order_items?.[0]?.title || "Multiple Books", purchase_price: o.total_amount }
       }))
-    ].sort((a, b) => {
-      const dateA = new Date(a.created_at || a.granted_at || a.rental_start_date || 0);
-      const dateB = new Date(b.created_at || b.granted_at || b.rental_start_date || 0);
-      return dateB - dateA;
-    });
+    ].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
-    console.log(`Total combined transactions: ${combined.length}`);
+    console.log(`Total combined items: ${combined.length}`);
     res.json(combined);
   } catch (err) {
-    console.error("getAdminOrders Detailed Error:", err);
-    res.status(500).json({ 
-      message: err.message,
-      hint: "Check Supabase RLS or table connections",
-      details: err
-    });
+    console.error("getAdminOrders Error:", err);
+    res.status(500).json({ message: err.message });
   }
 };
 
