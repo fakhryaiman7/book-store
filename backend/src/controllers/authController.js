@@ -99,7 +99,7 @@ const getUserProfile = async (req, res) => {
   try {
     const { data: user, error } = await supabase
       .from("users")
-      .select("id, name, email, is_admin")
+      .select("id, name, first_name, email, is_admin, phone, birth_date, gender, country, province, address, avatar_url")
       .eq("id", req.user._id || req.user.id)
       .single();
 
@@ -110,12 +110,92 @@ const getUserProfile = async (req, res) => {
     res.json({
       _id: user.id,
       name: user.name,
+      firstName: user.first_name,
       email: user.email,
       isAdmin: user.is_admin,
+      phone: user.phone,
+      birthDate: user.birth_date,
+      gender: user.gender,
+      country: user.country,
+      province: user.province,
+      address: user.address,
+      avatarUrl: user.avatar_url,
     });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
 
-export { authUser, registerUser, getUserProfile };
+const updateUserProfile = async (req, res) => {
+  try {
+    const { 
+      name, 
+      firstName, 
+      phone, 
+      birthDate, 
+      gender, 
+      country, 
+      province, 
+      address, 
+      avatarUrl 
+    } = req.body;
+
+    const { data: user, error } = await supabase
+      .from("users")
+      .update({
+        name,
+        first_name: firstName,
+        phone,
+        birth_date: birthDate,
+        gender,
+        country,
+        province,
+        address,
+        avatar_url: avatarUrl,
+      })
+      .eq("id", req.user._id || req.user.id)
+      .select()
+      .single();
+
+    if (error) {
+      return res.status(400).json({ message: error.message });
+    }
+
+    res.json({
+      _id: user.id,
+      name: user.name,
+      firstName: user.first_name,
+      email: user.email,
+      isAdmin: user.is_admin,
+      phone: user.phone,
+      birthDate: user.birth_date,
+      gender: user.gender,
+      country: user.country,
+      province: user.province,
+      address: user.address,
+      avatarUrl: user.avatar_url,
+      token: generateToken(user.id),
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+const deleteUser = async (req, res) => {
+  try {
+    const { error } = await supabase
+      .from("users")
+      .delete()
+      .eq("id", req.user._id || req.user.id);
+
+    if (error) {
+      return res.status(400).json({ message: error.message });
+    }
+
+    res.json({ message: "User deleted successfully" });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+export { authUser, registerUser, getUserProfile, updateUserProfile, deleteUser };

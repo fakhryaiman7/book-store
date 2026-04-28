@@ -23,6 +23,11 @@ const BookDetails = () => {
   const [userAccess, setUserAccess] = useState(null); // null | { access_type, expires_at }
   const [accessLoading, setAccessLoading] = useState(false);
   const [added, setAdded] = useState(false);
+  const [reviews, setReviews] = useState([]);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState("");
+  const [showReviewForm, setShowReviewForm] = useState(false);
+  const [submittingReview, setSubmittingReview] = useState(false);
 
   // Fetch book from backend API
   useEffect(() => {
@@ -44,7 +49,50 @@ const BookDetails = () => {
       }
     };
     fetchBook();
+    fetchReviews();
   }, [id]);
+
+  const fetchReviews = async () => {
+    try {
+      const { data } = await axios.get(`/api/books/${id}/reviews`);
+      setReviews(data);
+    } catch (err) {
+      console.error("Failed to fetch reviews", err);
+    }
+  };
+
+  const handleReviewSubmit = async (e) => {
+    e.preventDefault();
+    if (!reviewRating) return;
+    setSubmittingReview(true);
+    try {
+      const config = {
+        headers: {
+          Authorization: `Bearer ${user.token}`,
+        },
+      };
+      await axios.post(`/api/books/${id}/reviews`, {
+        rating: reviewRating,
+        comment: reviewComment
+      }, config);
+      
+      setReviewComment("");
+      setReviewRating(5);
+      setShowReviewForm(false);
+      fetchReviews();
+      // Also refetch book to update avg rating
+      const { data: updatedBook } = await axios.get(`/api/books/${id}`);
+      setBook(prev => ({
+        ...prev,
+        rating_avg: updatedBook.rating_avg,
+        rating_count: updatedBook.rating_count
+      }));
+    } catch (err) {
+      alert(err.response?.data?.message || err.message);
+    } finally {
+      setSubmittingReview(false);
+    }
+  };
 
   // Check if user already has access
   useEffect(() => {
@@ -342,9 +390,96 @@ const BookDetails = () => {
             </div>
           </div>
         </div>
-      </div>
-    </div>
-  );
-};
+        {/* Reviews Section */}
+        <div className="bg-white dark:bg-gray-900 rounded-[3rem] shadow-xl border border-gray-100 dark:border-gray-800 p-8 lg:p-16">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 mb-12">
+            <div>
+              <h2 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">{t("customer_reviews") || "Customer Reviews"}</h2>
+              <div className="flex items-center gap-4 mt-2">
+                <div className="flex text-yellow-400">
+                  {[...Array(5)].map((_, i) => (
+                    <svg key={i} className={`w-5 h-5 ${i < Math.round(book.rating_avg || 0) ? "fill-current" : "text-gray-200 dark:text-gray-700"}`} viewBox="0 0 20 20">
+                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                    </svg>
+                  ))}
+                </div>
+                <span className="text-gray-500 dark:text-gray-400 font-bold text-sm">{book.rating_avg?.toFixed(1) || "0.0"} ({book.rating_count || 0} {t("reviews")})</span>
+              </div>
+            </div>
+            {user && (
+              <button 
+                onClick={() => setShowReviewForm(!showReviewForm)}
+                className="bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary-light px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest border border-primary/10 hover:bg-primary hover:text-white transition-all"
+              >
+                {showReviewForm ? t("cancel") : t("write_review")}
+              </button>
+            )}
+          </div>
+
+          {showReviewForm && (
+            <form onSubmit={handleReviewSubmit} className="mb-16 bg-gray-50 dark:bg-gray-800/50 p-8 rounded-3xl border border-gray-100 dark:border-gray-800 animate-in slide-in-from-top-4 duration-300">
+              <h3 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-widest mb-6">{t("your_review")}</h3>
+              <div className="space-y-6">
+                <div className="flex gap-2">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      onClick={() => setReviewRating(star)}
+                      className={`transition-all ${reviewRating >= star ? "text-yellow-400 scale-110" : "text-gray-300 dark:text-gray-700 hover:text-yellow-200"}`}
+                    >
+                      <svg className="w-10 h-10 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
+                    </button>
+                  ))}
+                </div>
+                <textarea
+                  value={reviewComment}
+                  onChange={(e) => setReviewComment(e.target.value)}
+                  placeholder={t("review_placeholder") || "Share your thoughts about this book..."}
+                  className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-6 min-h-[120px] outline-none focus:border-primary transition-colors text-gray-900 dark:text-white"
+                />
+                <button
+                  type="submit"
+                  disabled={submittingReview}
+                  className="bg-primary text-white px-12 py-4 rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all disabled:opacity-50"
+                >
+                  {submittingReview ? "..." : t("submit_review")}
+                </button>
+              </div>
+            </form>
+          )}
+
+          <div className="space-y-8">
+            {reviews.length === 0 ? (
+              <div className="text-center py-12">
+                <p className="text-gray-400 dark:text-gray-600 font-bold italic">{t("no_reviews") || "No reviews yet. Be the first to rate this book!"}</p>
+              </div>
+            ) : (
+              reviews.map((review) => (
+                <div key={review.id} className="border-b border-gray-50 dark:border-gray-800 last:border-0 pb-8 last:pb-0">
+                  <div className="flex items-center gap-4 mb-4">
+                    <img 
+                      src={review.users?.avatar_url || `https://ui-avatars.com/api/?name=${review.users?.name}&background=random`} 
+                      alt={review.users?.name} 
+                      className="w-12 h-12 rounded-xl object-cover border border-gray-100 dark:border-gray-800"
+                    />
+                    <div>
+                      <h4 className="text-sm font-black text-gray-900 dark:text-white">{review.users?.name}</h4>
+                      <div className="flex text-yellow-400 scale-75 origin-left">
+                        {[...Array(5)].map((_, i) => (
+                          <svg key={i} className={`w-4 h-4 ${i < review.rating ? "fill-current" : "text-gray-200 dark:text-gray-700"}`} viewBox="0 0 20 20">
+                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                          </svg>
+                        ))}
+                      </div>
+                    </div>
+                    <span className="ml-auto text-[10px] font-black text-gray-400 uppercase tracking-widest">{new Date(review.created_at).toLocaleDateString()}</span>
+                  </div>
+                  <p className="text-gray-600 dark:text-gray-400 leading-relaxed pl-16 rtl:pr-16 rtl:pl-0">{review.comment}</p>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
 
 export default BookDetails;

@@ -24,6 +24,7 @@ import AdminRentals from "./pages/AdminRentals";
 import AdminImport from "./pages/AdminImport";
 import Shop from "./pages/Shop";
 import Favorites from "./pages/Favorites";
+import Profile from "./pages/Profile";
 
 // Layout wrapper that hides navbar/footer on the reader page
 const AppLayout = () => {
@@ -63,6 +64,7 @@ const AppLayout = () => {
             <Route path="/cart" element={<Cart />} />
             <Route path="/my-library" element={<MyLibrary />} />
             <Route path="/favorites" element={<Favorites />} />
+            <Route path="/profile" element={<Profile />} />
             <Route path="/reader/:bookId" element={<BookReader />} />
           </Route>
 

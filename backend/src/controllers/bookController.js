@@ -96,4 +96,81 @@ const getStats = async (req, res) => {
   }
 };
 
-export { getBooks, getBookById, getStats };
+const createBookReview = async (req, res) => {
+  const { rating, comment } = req.body;
+  const bookId = req.params.id;
+  const userId = req.user._id || req.user.id;
+
+  try {
+    // 1. Check if user already reviewed
+    const { data: existingReview } = await supabase
+      .from("book_ratings")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("book_id", bookId)
+      .single();
+
+    if (existingReview) {
+      return res.status(400).json({ message: "Book already reviewed" });
+    }
+
+    // 2. Insert review
+    const { error: reviewError } = await supabase
+      .from("book_ratings")
+      .insert([
+        {
+          user_id: userId,
+          book_id: bookId,
+          rating: Number(rating),
+          comment,
+        },
+      ]);
+
+    if (reviewError) {
+      return res.status(400).json({ message: reviewError.message });
+    }
+
+    // 3. Update book rating avg/count
+    const { data: reviews } = await supabase
+      .from("book_ratings")
+      .select("rating")
+      .eq("book_id", bookId);
+
+    const ratingCount = reviews.length;
+    const ratingAvg = reviews.reduce((acc, item) => item.rating + acc, 0) / ratingCount;
+
+    await supabase
+      .from("books")
+      .update({
+        rating_avg: ratingAvg,
+        rating_count: ratingCount,
+      })
+      .eq("id", bookId);
+
+    res.status(201).json({ message: "Review added" });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+const getBookReviews = async (req, res) => {
+  const bookId = req.params.id;
+
+  try {
+    const { data: reviews, error } = await supabase
+      .from("book_ratings")
+      .select("*, users(name, avatar_url)")
+      .eq("book_id", bookId)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      return res.status(400).json({ message: error.message });
+    }
+
+    res.json(reviews);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+export { getBooks, getBookById, getStats, createBookReview, getBookReviews };
