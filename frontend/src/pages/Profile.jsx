@@ -68,16 +68,16 @@ const Profile = () => {
       setUploading(true);
       const fileExt = file.name.split(".").pop();
       const fileName = `${user._id || user.id}-${Math.random()}.${fileExt}`;
-      const filePath = `avatars/${fileName}`;
+      const filePath = fileName;
 
       const { error: uploadError } = await supabase.storage
-        .from("bookstream") // Assuming a bucket named 'bookstream' exists
+        .from("avatars")
         .upload(filePath, file);
 
       if (uploadError) throw uploadError;
 
       const { data: { publicUrl } } = supabase.storage
-        .from("bookstream")
+        .from("avatars")
         .getPublicUrl(filePath);
 
       setFormData((prev) => ({ ...prev, avatarUrl: publicUrl }));
