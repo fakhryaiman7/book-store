@@ -28,12 +28,19 @@ const getBooks = async (req, res) => {
     const { data: books, error } = await supabase.from("books").select("*");
 
     if (error) {
-      return res.status(500).json({ message: error.message });
+      console.error("Supabase Error in getBooks:", error);
+      return res.status(500).json({ message: error.message, details: error });
+    }
+
+    if (!books) {
+      console.error("Supabase returned null data for books query.");
+      return res.status(500).json({ message: "Failed to retrieve books from database." });
     }
 
     res.json(books.map(mapBook));
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error("Exception in getBooks:", err);
+    res.status(500).json({ message: err.message, stack: err.stack });
   }
 };
 

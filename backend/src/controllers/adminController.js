@@ -221,10 +221,20 @@ const getAdminUsers = async (req, res) => {
       .select("id, name, email, is_admin, created_at")
       .order("created_at", { ascending: false });
 
-    if (error) throw error;
+    if (error) {
+      console.error("Supabase Error in getAdminUsers:", error);
+      return res.status(500).json({ message: error.message, details: error });
+    }
+    
+    if (!users) {
+      console.error("Supabase returned null for getAdminUsers.");
+      return res.status(500).json({ message: "Failed to retrieve users." });
+    }
+
     res.json(users);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error("Exception in getAdminUsers:", err);
+    res.status(500).json({ message: err.message, stack: err.stack });
   }
 };
 
