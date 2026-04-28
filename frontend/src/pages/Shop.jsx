@@ -479,7 +479,7 @@ const Shop = () => {
               <button
                 key={cat.value}
                 onClick={() => setCategory(isActive ? "" : cat.value)}
-                className={`snap-center shrink-0 w-32 sm:w-40 relative group flex flex-col items-center justify-center gap-4 p-6 rounded-[2.5rem] transition-all duration-500 outline-none ${
+                className={`snap-center shrink-0 w-24 sm:w-28 relative group flex flex-col items-center justify-center gap-3 p-4 rounded-[1.8rem] transition-all duration-500 outline-none ${
                   isActive
                     ? "shadow-2xl shadow-primary/30 scale-105 border-0"
                     : "bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 hover:shadow-xl hover:border-gray-200 dark:hover:border-gray-700 hover:-translate-y-2"
@@ -492,7 +492,7 @@ const Shop = () => {
                 <div className={`absolute inset-0 bg-gradient-to-br ${bgGrad} opacity-0 group-hover:opacity-5 dark:group-hover:opacity-10 transition-opacity duration-300`} />
 
                 {/* Icon Container */}
-                <div className={`relative z-10 w-14 h-14 rounded-[1.5rem] flex items-center justify-center text-3xl transition-transform duration-500 group-hover:scale-110 group-hover:rotate-6 ${
+                <div className={`relative z-10 w-10 h-10 rounded-[1.2rem] flex items-center justify-center text-xl transition-transform duration-500 group-hover:scale-110 group-hover:rotate-6 ${
                   isActive 
                     ? "bg-white/20 text-white shadow-inner backdrop-blur-md" 
                     : "bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 group-hover:bg-white dark:group-hover:bg-gray-700"
@@ -500,7 +500,7 @@ const Shop = () => {
                   {cat.icon}
                 </div>
                 
-                <span className={`relative z-10 text-[10px] sm:text-[11px] font-black uppercase tracking-widest transition-colors ${
+                <span className={`relative z-10 text-[9px] font-black uppercase tracking-widest transition-colors ${
                   isActive 
                     ? "text-white" 
                     : "text-gray-500 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white"
