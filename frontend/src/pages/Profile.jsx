@@ -117,21 +117,33 @@ const Profile = () => {
   };
 
   const handleDeleteAccount = async () => {
-    if (window.confirm(t("delete_account_confirm") || "Are you sure you want to delete your account? This action cannot be undone.")) {
+    console.log("Delete account initiated");
+    const confirmMessage = t("delete_account_confirm") || "Are you sure you want to delete your account? This action cannot be undone.";
+    
+    if (window.confirm(confirmMessage)) {
       try {
+        setLoading(true);
+        console.log("Sending delete request for user:", user.id || user._id);
+        
         const config = {
           headers: {
             Authorization: `Bearer ${user.token}`,
           },
         };
-        await axios.delete("/api/auth/profile", config);
+        
+        const res = await axios.delete("/api/auth/profile", config);
+        console.log("Delete response:", res.data);
+        
         logout();
         navigate("/");
       } catch (error) {
+        console.error("Delete account error:", error);
         setMessage({
           type: "error",
           text: error.response?.data?.message || error.message,
         });
+      } finally {
+        setLoading(false);
       }
     }
   };
