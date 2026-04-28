@@ -1,3 +1,4 @@
+// Vercel Build Trigger: 2026-04-28
 import React from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
