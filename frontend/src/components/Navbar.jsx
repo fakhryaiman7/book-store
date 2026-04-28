@@ -53,7 +53,7 @@ const Navbar = () => {
             <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center shadow-lg shadow-primary/20 group-hover:rotate-6 transition-transform">
               <span className="text-white text-xl">📚</span>
             </div>
-            <span className="font-extrabold text-2xl tracking-tighter text-gray-900 dark:text-white">Book<span className="text-primary">Verse</span></span>
+            <span className="font-extrabold text-2xl tracking-tighter text-gray-900 dark:text-white">Book<span className="text-primary">Stream Test</span></span>
           </Link>
 
           {/* ── Center Nav Links (desktop) ── */}
