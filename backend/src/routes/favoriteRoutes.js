@@ -1,3 +1,4 @@
+import express from "express";
 import { toggleFavorite, checkFavorite, getFavorites } from "../controllers/favoriteController.js";
 import { protect } from "../middleware/authMiddleware.js";
 
