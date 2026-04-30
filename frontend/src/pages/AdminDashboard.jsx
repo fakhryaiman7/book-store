@@ -158,10 +158,10 @@ const AdminDashboard = () => {
                 ) : (
                   recentRentals.map((row) => (
                     <tr key={row.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/40 transition-colors group">
-                      <td className="px-8 py-5 whitespace-nowrap text-[11px] font-black text-gray-900 dark:text-white font-mono opacity-60 group-hover:opacity-100 transition-opacity">#{row.id.slice(0, 8).toUpperCase()}</td>
+                      <td className="px-8 py-5 whitespace-nowrap text-[11px] font-black text-gray-900 dark:text-white font-mono opacity-60 group-hover:opacity-100 transition-opacity">#{row.id?.slice(0, 8).toUpperCase() || "—"}</td>
                       <td className="px-8 py-5 whitespace-nowrap text-sm font-bold text-gray-600 dark:text-gray-300">{row.user?.name || "—"}</td>
                       <td className="px-8 py-5 whitespace-nowrap text-sm font-bold text-gray-600 dark:text-gray-300">{row.book?.title || "—"}</td>
-                      <td className="px-8 py-5 whitespace-nowrap text-xs font-medium text-gray-400 dark:text-gray-500">{fmt(row.created_at || row.granted_at)}</td>
+                      <td className="px-8 py-5 whitespace-nowrap text-xs font-medium text-gray-400 dark:text-gray-500">{fmt(row.created_at || row.granted_at || new Date())}</td>
                       <td className="px-8 py-5 whitespace-nowrap">{statusBadge(row)}</td>
                     </tr>
                   ))

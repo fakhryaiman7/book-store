@@ -5,6 +5,7 @@ import { AuthContext } from "../context/AuthContext";
 
 const AdminSidebar = () => {
   const location = useLocation();
+  const { t } = useTranslation();
   const { user } = useContext(AuthContext);
   const currentPath = location.pathname;
 
