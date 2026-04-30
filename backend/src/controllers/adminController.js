@@ -391,7 +391,7 @@ const updateAdminUser = async (req, res) => {
         is_author, 
         is_active, 
         phone, 
-        birth_date, 
+        birth_date: birth_date === "" ? null : birth_date, 
         gender, 
         country, 
         province, 
