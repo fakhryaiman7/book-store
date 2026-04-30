@@ -378,6 +378,7 @@ const getAdminOrders = async (req, res) => {
 // @desc    Update a user
 // @route   PUT /api/admin/users/:id
 // @access  Private/Admin
+const updateAdminUser = async (req, res) => {
   try {
     const { name, first_name, email, is_admin, is_author, is_active, phone, birth_date, gender, country, province, address } = req.body;
     const { data: updatedUser, error } = await supabase
