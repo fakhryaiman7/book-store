@@ -137,13 +137,13 @@ const Navbar = () => {
                   {t("nav_library")}
                 </Link>
 
-                {/* Admin badge */}
-                {(user.isAdmin || user.role === "admin") && (
+                {/* Dashboard badge (Admin/Author) */}
+                {(user.isAdmin || user.role === "admin" || user.isAuthor || user.role === "author") && (
                   <Link
                     to="/admin"
-                    className="text-xs font-bold bg-purple-100 dark:bg-purple-900/30 text-primary dark:text-primary-light px-3 py-1.5 rounded-lg hover:bg-primary hover:text-white transition-colors"
+                    className="text-xs font-bold bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary-light px-3 py-1.5 rounded-lg hover:bg-primary hover:text-white transition-colors uppercase tracking-wider"
                   >
-                    {t("nav_admin")}
+                    {t("nav_admin") || "Dashboard"}
                   </Link>
                 )}
 
@@ -250,8 +250,8 @@ const Navbar = () => {
               {user ? (
                 <>
                   <Link to="/my-library" onClick={() => setIsMenuOpen(false)} className="px-4 py-2.5 text-sm font-semibold text-gray-600 dark:text-gray-400 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800">{t("nav_library")}</Link>
-                  {(user.isAdmin || user.role === "admin") && (
-                    <Link to="/admin" onClick={() => setIsMenuOpen(false)} className="px-4 py-2.5 text-sm font-semibold text-primary rounded-lg hover:bg-primary-pale dark:hover:bg-primary/20">{t("nav_admin")}</Link>
+                  {(user.isAdmin || user.role === "admin" || user.isAuthor || user.role === "author") && (
+                    <Link to="/admin" onClick={() => setIsMenuOpen(false)} className="px-4 py-2.5 text-sm font-semibold text-primary rounded-lg hover:bg-primary-pale dark:hover:bg-primary/20">{t("nav_admin") || "Dashboard"}</Link>
                   )}
                   <button onClick={() => { handleLogout(); setIsMenuOpen(false); }} className="px-4 py-2.5 text-sm font-semibold text-red-500 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-left rtl:text-right">
                     {t("nav_logout")}
