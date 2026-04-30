@@ -8,6 +8,8 @@ const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABAS
 
 if (!supabaseKey) {
   console.error("CRITICAL: SUPABASE_SERVICE_ROLE_KEY or SUPABASE_ANON_KEY is missing in backend environment variables.");
+} else {
+  console.log("Supabase Client initialized for URL:", supabaseUrl.substring(0, 20) + "...");
 }
 
 export const supabase = createClient(supabaseUrl, supabaseKey, {
