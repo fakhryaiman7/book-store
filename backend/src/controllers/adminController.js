@@ -221,7 +221,8 @@ const getAdminStats = async (req, res) => {
         totalRevenue: ordersRevenue + rentalsRevenue,
         activeRentals: rentalsResult.data?.length || 0,
         booksCount: booksResult.count || 0,
-        usersCount: 0, // Authors shouldn't see total user count
+        totalSales: authorPurchases?.length || 0,
+        usersCount: 0, 
       });
     }
 

@@ -10,7 +10,7 @@ const AdminDashboard = () => {
   const { user } = useContext(AuthContext);
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
-  const [stats, setStats] = useState({ revenue: 0, activeRentals: 0, booksInStock: 0, totalUsers: 0, v: null });
+  const [stats, setStats] = useState({ revenue: 0, totalSales: 0, activeRentals: 0, booksInStock: 0, totalUsers: 0, v: null });
   const [recentRentals, setRecentRentals] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -26,6 +26,7 @@ const AdminDashboard = () => {
         const s = statsRes.data;
         setStats({ 
           revenue: s.totalRevenue || 0, 
+          totalSales: s.totalSales || 0,
           activeRentals: s.activeRentals || 0, 
           booksInStock: s.booksCount || 0, 
           totalUsers: s.usersCount || 0,
@@ -61,7 +62,8 @@ const AdminDashboard = () => {
 
   const statCards = [
     { title: t("total_revenue") || "Total Revenue", value: loading ? "..." : `${stats.revenue.toFixed(0)} ${t("currency")}`, icon: "💰", color: "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300" },
-    { title: t("active_rentals") || "Active Rentals", value: loading ? "..." : stats.activeRentals.toLocaleString(), icon: "🔄", color: "bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300" },
+    { title: t("total_sales") || "Total Sales", value: loading ? "..." : (stats.totalSales || 0).toLocaleString(), icon: "🛒", color: "bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300" },
+    { title: t("active_rentals") || "Active Rentals", value: loading ? "..." : stats.activeRentals.toLocaleString(), icon: "🔄", color: "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-300" },
     { title: t("books_in_stock") || "Books in Stock", value: loading ? "..." : stats.booksInStock.toLocaleString(), icon: "📚", color: "bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300" },
     { title: t("total_users") || "Total Users", value: loading ? "..." : stats.totalUsers.toLocaleString(), icon: "👥", color: "bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300", adminOnly: true },
   ].filter(card => !card.adminOnly || user?.isAdmin);
