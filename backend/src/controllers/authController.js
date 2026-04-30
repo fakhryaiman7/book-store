@@ -30,7 +30,12 @@ const authUser = async (req, res) => {
       return res.status(401).json({ message: "Invalid email or password" });
     }
   } catch (err) {
-    return res.status(500).json({ message: err.message });
+    console.error("AUTH_ERROR (Login):", err);
+    return res.status(500).json({ 
+      message: err.message, 
+      stack: process.env.NODE_ENV === 'production' ? null : err.stack,
+      debug: "Error in authUser function"
+    });
   }
 };
 
@@ -93,8 +98,12 @@ const registerUser = async (req, res) => {
     });
 
   } catch (err) {
-    console.error("DEBUG: Server Crash:", err);
-    return res.status(500).json({ message: `Server Error: ${err.message}` });
+    console.error("AUTH_ERROR (Register):", err);
+    return res.status(500).json({ 
+      message: err.message, 
+      stack: process.env.NODE_ENV === 'production' ? null : err.stack,
+      debug: "Error in registerUser function"
+    });
   }
 };
 
