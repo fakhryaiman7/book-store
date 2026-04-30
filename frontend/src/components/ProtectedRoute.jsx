@@ -9,9 +9,9 @@ const ProtectedRoute = ({ adminOnly = false }) => {
     return <Navigate to="/login" replace />;
   }
 
-  const isAdmin = user.isAdmin || user.role === "admin";
-
-  if (adminOnly && !isAdmin) {
+  const isAuthorized = user.isAdmin || user.role === "admin" || user.isAuthor || user.role === "author";
+  
+  if (adminOnly && !isAuthorized) {
     return <Navigate to="/" replace />;
   }
 
