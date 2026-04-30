@@ -390,6 +390,7 @@ const updateAdminUser = async (req, res) => {
         email, 
         is_admin, 
         is_author, 
+        role: is_admin ? "admin" : (is_author ? "author" : "customer"),
         is_active, 
         phone, 
         birth_date: birth_date === "" ? null : birth_date, 
