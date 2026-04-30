@@ -63,8 +63,8 @@ const AdminDashboard = () => {
     { title: t("total_revenue") || "Total Revenue", value: loading ? "..." : `${stats.revenue.toFixed(0)} ${t("currency")}`, icon: "💰", color: "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300" },
     { title: t("active_rentals") || "Active Rentals", value: loading ? "..." : stats.activeRentals.toLocaleString(), icon: "🔄", color: "bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300" },
     { title: t("books_in_stock") || "Books in Stock", value: loading ? "..." : stats.booksInStock.toLocaleString(), icon: "📚", color: "bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300" },
-    { title: t("total_users") || "Total Users", value: loading ? "..." : stats.totalUsers.toLocaleString(), icon: "👥", color: "bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300" },
-  ];
+    { title: t("total_users") || "Total Users", value: loading ? "..." : stats.totalUsers.toLocaleString(), icon: "👥", color: "bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300", adminOnly: true },
+  ].filter(card => !card.adminOnly || user?.isAdmin);
 
   const fmt = (d) => {
     const locale = i18n.language === 'ar' ? 'ar-EG' : 'en-US';
@@ -90,16 +90,18 @@ const AdminDashboard = () => {
       <div className="flex-1 p-6 lg:p-10 space-y-8">
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
           <div className="animate-in slide-in-from-left duration-500">
-            <h1 className="text-4xl font-black text-gray-900 dark:text-white tracking-tight">{t("dashboard_overview") || "Dashboard Overview"}</h1>
-            <p className="text-gray-500 dark:text-gray-400 mt-2 font-medium">{t("welcome_admin") || "Welcome back, Administrator"} <span className="text-primary font-black">{user?.name}</span> {stats.v && <span className="text-[10px] ml-2 opacity-50">Backend: {stats.v}</span>}</p>
+            <h1 className="text-4xl font-black text-gray-900 dark:text-white tracking-tight">{user?.isAdmin ? (t("dashboard_overview") || "Dashboard Overview") : (t("author_dashboard") || "Author Dashboard")}</h1>
+            <p className="text-gray-500 dark:text-gray-400 mt-2 font-medium">{user?.isAdmin ? (t("welcome_admin") || "Welcome back, Administrator") : (t("welcome_author") || "Welcome back, Author")} <span className="text-primary font-black">{user?.name}</span> {stats.v && <span className="text-[10px] ml-2 opacity-50">Backend: {stats.v}</span>}</p>
           </div>
           <div className="flex flex-wrap gap-4">
-            <button 
-              onClick={() => navigate("/admin/import")} 
-              className="bg-white dark:bg-gray-900 text-gray-900 dark:text-white border border-gray-100 dark:border-gray-800 font-black py-3 px-6 rounded-2xl shadow-sm hover:shadow-xl transition-all flex items-center space-x-2 rtl:space-x-reverse text-xs uppercase tracking-widest hover:border-primary/20"
-            >
-              <span>📥</span><span>{t("import_books") || "Import Books"}</span>
-            </button>
+            {user?.isAdmin && (
+              <button 
+                onClick={() => navigate("/admin/import")} 
+                className="bg-white dark:bg-gray-900 text-gray-900 dark:text-white border border-gray-100 dark:border-gray-800 font-black py-3 px-6 rounded-2xl shadow-sm hover:shadow-xl transition-all flex items-center space-x-2 rtl:space-x-reverse text-xs uppercase tracking-widest hover:border-primary/20"
+              >
+                <span>📥</span><span>{t("import_books") || "Import Books"}</span>
+              </button>
+            )}
             <button 
               onClick={handleGenerateReport} 
               className="bg-primary text-white font-black py-3 px-6 rounded-2xl shadow-xl shadow-primary/20 hover:bg-opacity-90 transition-all flex items-center space-x-2 rtl:space-x-reverse text-xs uppercase tracking-widest"
@@ -110,7 +112,7 @@ const AdminDashboard = () => {
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className={`grid grid-cols-1 sm:grid-cols-2 ${user?.isAdmin ? 'lg:grid-cols-4' : 'lg:grid-cols-3'} gap-6`}>
           {statCards.map((stat, index) => (
             <div key={index} className="bg-white dark:bg-gray-900 rounded-[2rem] shadow-sm p-6 border border-gray-100 dark:border-gray-800 flex items-center space-x-4 rtl:space-x-reverse hover:shadow-xl transition-all duration-300 group">
               <div className={`p-4 rounded-2xl text-2xl ${stat.color} group-hover:scale-110 transition-transform shadow-inner`}>{stat.icon}</div>

@@ -14,7 +14,7 @@ const protect = async (req, res, next) => {
       
       const { data: user, error } = await supabase
         .from("users")
-        .select("id, name, email, is_admin")
+        .select("id, name, email, is_admin, is_author")
         .eq("id", decoded.id)
         .single();
         
@@ -26,7 +26,8 @@ const protect = async (req, res, next) => {
         _id: user.id,
         name: user.name,
         email: user.email,
-        isAdmin: user.is_admin
+        isAdmin: user.is_admin,
+        isAuthor: user.is_author
       };
       
       next();
@@ -43,13 +44,22 @@ const protect = async (req, res, next) => {
   }
 };
 
-const admin = (req, res, next) => {
-  if (req.user && req.user.isAdmin) {
+const author = (req, res, next) => {
+  if (req.user && req.user.isAuthor) {
     next();
   } else {
     res.status(401);
-    throw new Error("Not authorized as an admin");
+    throw new Error("Not authorized as an author");
   }
 };
 
-export { protect, admin };
+const adminOrAuthor = (req, res, next) => {
+  if (req.user && (req.user.isAdmin || req.user.isAuthor)) {
+    next();
+  } else {
+    res.status(401);
+    throw new Error("Not authorized as an admin or author");
+  }
+};
+
+export { protect, admin, author, adminOrAuthor };

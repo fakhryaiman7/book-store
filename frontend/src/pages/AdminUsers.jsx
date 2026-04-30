@@ -29,6 +29,7 @@ const AdminUsers = () => {
 
   const ROLES = useMemo(() => [
     { label: t("role_customer") || "Customer", value: "customer" },
+    { label: t("role_author") || "Author", value: "author" },
     { label: t("role_admin") || "Admin", value: "admin" },
   ], [t]);
 
@@ -58,7 +59,7 @@ const AdminUsers = () => {
       name: u.name, 
       first_name: u.first_name || "",
       email: u.email, 
-      role: u.role || (u.is_admin ? "admin" : "customer"), 
+      role: u.role || (u.is_admin ? "admin" : (u.is_author ? "author" : "customer")), 
       phone: u.phone || "", 
       is_active: u.is_active ?? true,
       birth_date: u.birth_date || "",
@@ -77,6 +78,7 @@ const AdminUsers = () => {
       first_name: form.first_name,
       email: form.email, 
       is_admin: form.role === "admin", 
+      is_author: form.role === "author",
       is_active: form.is_active,
       phone: form.phone,
       birth_date: form.birth_date,
@@ -181,8 +183,8 @@ const AdminUsers = () => {
                       <td className="px-6 py-4 text-sm font-medium text-gray-500 dark:text-gray-400">{u.first_name || "—"}</td>
                       <td className="px-6 py-4 text-sm font-medium text-gray-500 dark:text-gray-400">{u.email}</td>
                       <td className="px-6 py-4">
-                        <span className={`text-[10px] font-black px-3 py-1 rounded-lg uppercase tracking-wider ${(u.role === "admin" || u.is_admin) ? "bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400" : "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400"}`}>
-                          {u.role || (u.is_admin ? "admin" : "customer")}
+                        <span className={`text-[10px] font-black px-3 py-1 rounded-lg uppercase tracking-wider ${(u.role === "admin" || u.is_admin) ? "bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400" : (u.role === "author" || u.is_author) ? "bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400" : "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400"}`}>
+                          {u.role || (u.is_admin ? t("role_admin") : (u.is_author ? t("role_author") : t("role_customer")))}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-sm font-medium text-gray-500 dark:text-gray-400">{u.phone || "—"}</td>

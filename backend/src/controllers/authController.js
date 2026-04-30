@@ -23,6 +23,7 @@ const authUser = async (req, res) => {
         name: user.name,
         email: user.email,
         isAdmin: user.is_admin,
+        isAuthor: user.is_author,
         token: generateToken(user.id),
       });
     } else {
@@ -61,6 +62,7 @@ const registerUser = async (req, res) => {
           email,
           password: hashedPassword,
           is_admin: false,
+          is_author: false,
         },
       ])
       .select()
@@ -86,6 +88,7 @@ const registerUser = async (req, res) => {
       name: user.name,
       email: user.email,
       isAdmin: user.is_admin,
+      isAuthor: user.is_author,
       token: generateToken(user.id),
     });
 
@@ -99,7 +102,7 @@ const getUserProfile = async (req, res) => {
   try {
     const { data: user, error } = await supabase
       .from("users")
-      .select("id, name, first_name, email, is_admin, phone, birth_date, gender, country, province, address, avatar_url")
+      .select("id, name, first_name, email, is_admin, is_author, phone, birth_date, gender, country, province, address, avatar_url")
       .eq("id", req.user._id || req.user.id)
       .single();
 
@@ -113,6 +116,7 @@ const getUserProfile = async (req, res) => {
       firstName: user.first_name,
       email: user.email,
       isAdmin: user.is_admin,
+      isAuthor: user.is_author,
       phone: user.phone,
       birthDate: user.birth_date,
       gender: user.gender,
@@ -167,6 +171,7 @@ const updateUserProfile = async (req, res) => {
       firstName: user.first_name,
       email: user.email,
       isAdmin: user.is_admin,
+      isAuthor: user.is_author,
       phone: user.phone,
       birthDate: user.birth_date,
       gender: user.gender,

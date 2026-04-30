@@ -60,6 +60,12 @@ const updateBook = async (req, res) => {
     throw new Error("Book not found");
   }
 
+  // Author check: Authors can only edit their own books
+  if (!req.user.isAdmin && req.user.isAuthor && book.user_id !== req.user._id) {
+    res.status(403);
+    throw new Error("Not authorized to edit this book");
+  }
+
   const updateData = {
     title: req.body.title || book.title,
     author: req.body.author || book.author,
@@ -100,6 +106,12 @@ const deleteBook = async (req, res) => {
   if (findError || !book) {
     res.status(404);
     throw new Error("Book not found");
+  }
+
+  // Author check: Authors can only delete their own books
+  if (!req.user.isAdmin && req.user.isAuthor && book.user_id !== req.user._id) {
+    res.status(403);
+    throw new Error("Not authorized to delete this book");
   }
 
   const { error: deleteError } = await supabase
@@ -172,10 +184,50 @@ const internalizeFile = async (req, res) => {
 // @access  Private/Admin
 const getAdminStats = async (req, res) => {
   try {
-    // 1. Total Revenue from successful orders and rentals
+    // Filter by author if not admin
+    let ordersQuery = supabase.from("orders").select("total_amount").eq("payment_status", "paid");
+    let rentalsQuery = supabase.from("rentals").select("total_rental_cost");
+    let booksQuery = supabase.from("books").select("*", { count: "exact", head: true });
+
+    if (!req.user.isAdmin && req.user.isAuthor) {
+      // For authors, we only want revenue from their books
+      // This is tricky because orders can have multiple books. 
+      // For now, let's assume one book per order or filter rentals/purchases by book uploader
+      
+      // Get author's books
+      const { data: authorBooks } = await supabase.from("books").select("id").eq("user_id", req.user._id);
+      const authorBookIds = authorBooks?.map(b => b.id) || [];
+
+      rentalsQuery = rentalsQuery.in("book_id", authorBookIds);
+      booksQuery = booksQuery.eq("user_id", req.user._id);
+      
+      // Orders revenue for authors is harder without a junction table link in orders directly
+      // But we can check user_book_access where access_type = 'purchase'
+      const { data: authorPurchases } = await supabase.from("user_book_access")
+        .select("book:books(purchase_price)")
+        .eq("access_type", "purchase")
+        .in("book_id", authorBookIds);
+      
+      const ordersRevenue = authorPurchases?.reduce((sum, p) => sum + (parseFloat(p.book?.purchase_price) || 0), 0) || 0;
+      
+      const [rentalsResult, booksResult] = await Promise.all([
+        rentalsQuery,
+        booksQuery
+      ]);
+
+      const rentalsRevenue = rentalsResult.data?.reduce((sum, rental) => sum + (parseFloat(rental.total_rental_cost) || 0), 0) || 0;
+      
+      return res.json({
+        totalRevenue: ordersRevenue + rentalsRevenue,
+        activeRentals: rentalsResult.data?.length || 0,
+        booksCount: booksResult.count || 0,
+        usersCount: 0, // Authors shouldn't see total user count
+      });
+    }
+
     const [ordersResult, rentalsResult] = await Promise.all([
-      supabase.from("orders").select("total_amount").eq("payment_status", "paid"),
-      supabase.from("rentals").select("total_rental_cost")
+      ordersQuery,
+      rentalsQuery
     ]);
 
     const ordersRevenue = ordersResult.data?.reduce((sum, order) => sum + (parseFloat(order.total_amount) || 0), 0) || 0;
@@ -218,7 +270,7 @@ const getAdminUsers = async (req, res) => {
   try {
     const { data: users, error } = await supabase
       .from("users")
-      .select("id, name, first_name, email, is_admin, phone, birth_date, gender, country, province, address, avatar_url, created_at, is_active")
+      .select("id, name, first_name, email, is_admin, is_author, phone, birth_date, gender, country, province, address, avatar_url, created_at, is_active")
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -243,26 +295,50 @@ const getAdminUsers = async (req, res) => {
 // @access  Private/Admin
 const getAdminOrders = async (req, res) => {
   try {
-    console.log("Fetching admin orders, rentals and purchases...");
+    console.log("Fetching orders, rentals and purchases...");
     
+    let authorBookIds = [];
+    if (!req.user.isAdmin && req.user.isAuthor) {
+      const { data: authorBooks } = await supabase.from("books").select("id").eq("user_id", req.user._id);
+      authorBookIds = authorBooks?.map(b => b.id) || [];
+    }
+
     // 1. Fetch rentals
-    const { data: rentals } = await supabase
+    let rentalsQuery = supabase
       .from("rentals")
       .select("*, book:books(title, purchase_price), user:users(name, email)")
       .order("created_at", { ascending: false });
 
+    if (authorBookIds.length > 0) {
+      rentalsQuery = rentalsQuery.in("book_id", authorBookIds);
+    } else if (!req.user.isAdmin && req.user.isAuthor) {
+       return res.json([]); // No books, no orders
+    }
+
+    const { data: rentals } = await rentalsQuery;
+
     // 2. Fetch purchases from user_book_access
-    const { data: access } = await supabase
+    let accessQuery = supabase
       .from("user_book_access")
       .select("*, book:books(title, purchase_price), user:users(name, email)")
       .eq("access_type", "purchase")
       .order("created_at", { ascending: false });
 
-    // 3. Fetch orders (The most likely place for the 419 EGP)
-    const { data: orders } = await supabase
-      .from("orders")
-      .select("*, user:users(name, email)")
-      .order("created_at", { ascending: false });
+    if (authorBookIds.length > 0) {
+      accessQuery = accessQuery.in("book_id", authorBookIds);
+    }
+
+    const { data: access } = await accessQuery;
+
+    // 3. Fetch orders (Only for Admin)
+    let orders = [];
+    if (req.user.isAdmin) {
+      const { data: ordersData } = await supabase
+        .from("orders")
+        .select("*, user:users(name, email)")
+        .order("created_at", { ascending: false });
+      orders = ordersData || [];
+    }
 
     // 4. Combine and normalize everything
     const combined = [
@@ -302,9 +378,8 @@ const getAdminOrders = async (req, res) => {
 // @desc    Update a user
 // @route   PUT /api/admin/users/:id
 // @access  Private/Admin
-const updateAdminUser = async (req, res) => {
   try {
-    const { name, first_name, email, is_admin, is_active, phone, birth_date, gender, country, province, address } = req.body;
+    const { name, first_name, email, is_admin, is_author, is_active, phone, birth_date, gender, country, province, address } = req.body;
     const { data: updatedUser, error } = await supabase
       .from("users")
       .update({ 
@@ -312,6 +387,7 @@ const updateAdminUser = async (req, res) => {
         first_name,
         email, 
         is_admin, 
+        is_author, 
         is_active, 
         phone, 
         birth_date, 

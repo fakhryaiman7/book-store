@@ -1,24 +1,29 @@
 import { Link, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { useContext } from "react";
+import { AuthContext } from "../context/AuthContext";
 
 const AdminSidebar = () => {
   const location = useLocation();
-  const { t } = useTranslation();
+  const { user } = useContext(AuthContext);
   const currentPath = location.pathname;
 
   const links = [
     { name: t("nav_dashboard") || "Dashboard", path: "/admin", icon: "📊" },
     { name: t("manage_books") || "Manage Books", path: "/admin/books", icon: "📚" },
     { name: t("orders_rentals") || "Orders / Rentals", path: "/admin/rentals", icon: "🔄" },
-    { name: t("users") || "Users", path: "/admin/users", icon: "👥" },
-    { name: t("import_books") || "Import Books", path: "/admin/import", icon: "📥" },
-  ];
+    { name: t("users") || "Users", path: "/admin/users", icon: "👥", adminOnly: true },
+    { name: t("import_books") || "Import Books", path: "/admin/import", icon: "📥", adminOnly: true },
+  ].filter(link => !link.adminOnly || user?.isAdmin);
+
+  const portalTitle = user?.isAdmin ? (t("admin_portal") || "Admin Portal") : (t("author_portal") || "Author Portal");
+  const portalDesc = user?.isAdmin ? (t("manage_platform") || "Manage your platform") : (t("manage_your_books") || "Manage your books");
 
   return (
     <div className="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white w-full md:w-64 flex-shrink-0 md:min-h-[calc(100vh-64px)] rounded-b-xl md:rounded-b-none md:rounded-r-xl shadow-sm md:shadow-xl overflow-hidden border-r border-gray-100 dark:border-gray-800 transition-colors duration-200">
       <div className="p-6 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-950/20">
-        <h2 className="text-xl font-bold text-primary dark:text-accent tracking-wide uppercase">{t("admin_portal") || "Admin Portal"}</h2>
-        <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">{t("manage_platform") || "Manage your platform"}</p>
+        <h2 className="text-xl font-bold text-primary dark:text-accent tracking-wide uppercase">{portalTitle}</h2>
+        <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">{portalDesc}</p>
       </div>
       
       <nav className="p-4 space-y-2">

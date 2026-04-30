@@ -2,9 +2,13 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import AdminSidebar from "../components/AdminSidebar";
 import { supabase } from "../lib/supabase";
 import { useTranslation } from "react-i18next";
+import { useContext } from "react";
+import { AuthContext } from "../context/AuthContext";
+import axios from "../api/axios";
 
 const AdminBooks = () => {
   const { t } = useTranslation();
+  const { user } = useContext(AuthContext);
   const [books, setBooks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -61,7 +65,13 @@ const AdminBooks = () => {
 
   const fetchBooks = async () => {
     setLoading(true);
-    const { data, error: fetchError } = await supabase.from("books").select("*").order("created_at", { ascending: false });
+    let query = supabase.from("books").select("*").order("created_at", { ascending: false });
+    
+    if (!user?.isAdmin && user?.isAuthor) {
+      query = query.eq("user_id", user._id || user.id);
+    }
+
+    const { data, error: fetchError } = await query;
     if (fetchError) {
       setError(fetchError.message);
     } else {
@@ -196,47 +206,50 @@ const AdminBooks = () => {
     e.preventDefault();
     setSaving(true); setError(null);
     const payload = {
-      title: form.title, author: form.author, category: form.category,
-      description: form.description, image: form.image,
-      price_per_day: parseFloat(form.price_per_day || 0),
-      rental_price: parseFloat(form.rental_price || form.price_per_day || 0),
-      purchase_price: parseFloat(form.purchase_price || 0),
-      discount_price: form.discount_price ? parseFloat(form.discount_price) : null,
-      count_in_stock: parseInt(form.count_in_stock || 0),
-      isbn: form.isbn, published_year: parseInt(form.published_year) || null,
-      language: form.language,      pages: parseInt(form.pages) || null,
+      title: form.title, 
+      author: form.author, 
+      category: form.category,
+      description: form.description, 
+      image: form.image,
+      pricePerDay: parseFloat(form.price_per_day || 0),
+      purchasePrice: parseFloat(form.purchase_price || 0),
+      discountPrice: form.discount_price ? parseFloat(form.discount_price) : null,
+      countInStock: parseInt(form.count_in_stock || 0),
+      isbn: form.isbn, 
+      published_year: parseInt(form.published_year) || null,
+      language: form.language,      
+      pages: parseInt(form.pages) || null,
       book_file_url: form.book_file_url,
       preview_file_url: form.preview_file_url,
       read_mode: form.read_mode,
       available_for_sale: form.available_for_sale,
       available_for_rent: form.available_for_rent,
-      updated_at: new Date().toISOString(),
     };
 
-    let result;
-    if (editId) {
-      result = await supabase.from("books").update(payload).eq("id", editId);
-    } else {
-      result = await supabase.from("books").insert([payload]);
-    }
-
-    if (result.error) {
-      setError(result.error.message);
-    } else {
+    try {
+      if (editId) {
+        await axios.put(`/api/admin/books/${editId}`, payload);
+      } else {
+        await axios.post("/api/admin/books", payload);
+      }
       setSuccess(t("saved_success") || "Saved successfully!");
       setShowModal(false);
       fetchBooks();
+    } catch (err) {
+      setError(err.response?.data?.message || err.message);
     }
     setSaving(false);
     setTimeout(() => setSuccess(null), 3000);
   };
 
   const handleDelete = async () => {
-    const { error: err } = await supabase.from("books").delete().eq("id", deleteId);
-    if (!err) { 
+    try {
+      await axios.delete(`/api/admin/books/${deleteId}`);
       setSuccess(t("deleted_success") || "Book deleted!"); 
       setSelectedBookIds(prev => prev.filter(id => id !== deleteId));
       fetchBooks(); 
+    } catch (err) {
+      setError(err.response?.data?.message || err.message);
     }
     setDeleteId(null);
     setTimeout(() => setSuccess(null), 3000);
