@@ -24,7 +24,7 @@ const AdminBooks = () => {
 
   const emptyForm = useMemo(() => ({
     title: "", author: "", category: "Fiction", description: "",
-    image: "", price_per_day: "", rental_price: "", purchase_price: "", discount_price: "", count_in_stock: "50",
+    image: "", price_per_day: "", rental_price: "", purchase_price: "", discount_price: "", count_in_stock: "999999",
     isbn: "", published_year: new Date().getFullYear().toString(), language: "English", pages: "",
     book_file_url: "",
     preview_file_url: "",
@@ -349,7 +349,7 @@ const AdminBooks = () => {
                         className="w-4 h-4 rounded border-gray-300 focus:ring-primary text-primary transition-all cursor-pointer"
                       />
                     </th>
-                    {[t("col_cover")||"Cover", t("col_title")||"Title", t("col_author")||"Author", t("col_cat")||"Category", t("col_rent")||"Rent", t("col_buy")||"Buy", t("col_stock")||"Stock", t("col_actions")||"Actions"].map((h, i) => (
+                    {[t("col_cover")||"Cover", t("col_title")||"Title", t("col_author")||"Author", t("col_cat")||"Category", t("col_rent")||"Rent", t("col_buy")||"Buy", t("col_actions")||"Actions"].map((h, i) => (
                       <th key={i} className="px-6 py-4 text-left rtl:text-right text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">{h}</th>
                     ))}
                   </tr>
@@ -377,7 +377,6 @@ const AdminBooks = () => {
                       </span></td>
                       <td className="px-6 py-4 text-xs font-black text-gray-700 dark:text-gray-300">{parseFloat(book.price_per_day).toFixed(0)} {t("currency")}</td>
                       <td className="px-6 py-4 text-xs font-black text-gray-900 dark:text-white">{parseFloat(book.purchase_price).toFixed(0)} {t("currency")}</td>
-                      <td className="px-6 py-4"><span className={`text-xs font-black ${book.count_in_stock > 5 ? "text-green-500" : "text-red-500"}`}>{book.count_in_stock}</span></td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex gap-2">
                           <button onClick={() => openEdit(book)} className="p-2.5 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary hover:bg-primary/5 transition-all">
@@ -534,7 +533,7 @@ const AdminBooks = () => {
 
               <div className="space-y-4">
                 <button type="button" onClick={() => setShowAdvanced(!showAdvanced)} className="text-[10px] font-black uppercase text-primary flex items-center gap-2 tracking-widest">
-                  {showAdvanced ? "▼" : "▶"} {t("advanced_options") || "Advanced Options (ISBN, Pages, Stock)"}
+                  {showAdvanced ? "▼" : "▶"} {t("advanced_options") || "Advanced Options (ISBN, Pages)"}
                 </button>
                 {showAdvanced && (
                   <div className="grid grid-cols-3 gap-6 animate-in slide-in-from-top-2">
@@ -547,11 +546,6 @@ const AdminBooks = () => {
                       <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest">{t("form_pages") || "Pages"}</label>
                       <input type="number" className="w-full bg-gray-50/50 dark:bg-gray-800 border border-gray-100 dark:border-gray-800 rounded-xl px-4 py-2.5 text-xs outline-none dark:text-white font-bold"
                         value={form.pages} onChange={e => setForm(p => ({ ...p, pages: e.target.value }))} />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest">{t("form_stock") || "Stock"}</label>
-                      <input type="number" required className="w-full bg-gray-50/50 dark:bg-gray-800 border border-gray-100 dark:border-gray-800 rounded-xl px-4 py-2.5 text-xs outline-none dark:text-white font-bold"
-                        value={form.count_in_stock} onChange={e => setForm(p => ({ ...p, count_in_stock: e.target.value }))} />
                     </div>
                   </div>
                 )}
