@@ -7,12 +7,14 @@
     "build": "npm install --prefix frontend && npm run build --prefix frontend && mkdir -p public && cp -r frontend/dist/* public/"
   },
   "dependencies": {
-    "express": "^5.2.1",
+    "@supabase/supabase-js": "^2.98.0",
+    "axios": "^1.13.6",
+    "bcryptjs": "^3.0.3",
+    "colorette": "^2.0.20",
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
-    "bcryptjs": "^3.0.3",
+    "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
-    "@supabase/supabase-js": "^2.98.0",
-    "axios": "^1.13.6"
+    "nodemailer": "^8.0.7"
   }
 }
