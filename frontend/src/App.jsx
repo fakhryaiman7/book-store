@@ -3,6 +3,7 @@ import React from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import { CartProvider } from "./context/CartContext";
+import { Toaster } from "react-hot-toast";
 
 import Navbar from "./components/Navbar";
 import AILibrarian from "./components/AILibrarian";
@@ -26,6 +27,7 @@ import AdminImport from "./pages/AdminImport";
 import Shop from "./pages/Shop";
 import Favorites from "./pages/Favorites";
 import Profile from "./pages/Profile";
+import Contact from "./pages/Contact";
 
 // Layout wrapper that hides navbar/footer on the reader page
 const AppLayout = () => {
@@ -58,7 +60,7 @@ const AppLayout = () => {
           <Route path="/register" element={<Register />} />
           <Route path="/book/:id" element={<BookDetails />} />
           <Route path="/shop" element={<Shop />} />
-          <Route path="/contact" element={<Navigate to="/" replace />} />
+          <Route path="/contact" element={<Contact />} />
 
           {/* Protected Routes (any logged-in user) */}
           <Route element={<ProtectedRoute />}>
@@ -124,6 +126,7 @@ import { ThemeProvider } from "./context/ThemeContext";
 function App() {
   return (
     <Router>
+      <Toaster position="top-center" reverseOrder={false} />
       <ThemeProvider>
         <AuthProvider>
           <CartProvider>
