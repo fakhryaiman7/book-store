@@ -2,63 +2,56 @@ import { supabase } from "../config/supabase.js";
 import generateToken from "../utils/generateToken.js";
 import bcrypt from "bcryptjs";
 
-const authUser = async (req, res) => {
+export const authUser = async (req, res) => {
   const { email, password } = req.body;
   try {
     const { data: user, error } = await supabase
       .from("users")
       .select("*")
       .eq("email", email)
-      .single();
+      .maybeSingle();
 
     if (error || !user) {
-      return res.status(401).json({ message: "Invalid email or password" });
+      return res.status(401).json({ message: "Invalid credentials" });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
-    if (isMatch) {
-      return res.json({
-        id: user.id,
-        _id: user.id,
-        name: user.name,
-        email: user.email,
-        isAdmin: user.is_admin,
-        isAuthor: user.is_author,
-        token: generateToken(user.id),
-      });
-    } else {
-      return res.status(401).json({ message: "Invalid email or password" });
+    if (!isMatch) {
+      return res.status(401).json({ message: "Invalid credentials" });
     }
-  } catch (err) {
-    console.error("AUTH_ERROR (Login):", err);
-    return res.status(500).json({ 
-      message: err.message, 
-      stack: process.env.NODE_ENV === 'production' ? null : err.stack,
-      debug: "Error in authUser function"
+
+    res.json({
+      id: user.id,
+      _id: user.id,
+      name: user.name,
+      email: user.email,
+      isAdmin: user.is_admin,
+      isAuthor: user.is_author,
+      token: generateToken(user.id),
     });
+  } catch (err) {
+    console.error("Login failed:", err.message);
+    res.status(500).json({ message: "Server error during login" });
   }
 };
 
-const registerUser = async (req, res) => {
+export const registerUser = async (req, res) => {
   const { name, email, password } = req.body;
 
   try {
-    // 1. Check if user exists
     const { data: userExists } = await supabase
       .from("users")
       .select("id")
       .eq("email", email)
-      .single();
+      .maybeSingle();
 
     if (userExists) {
-      return res.status(400).json({ message: "User already exists" });
+      return res.status(400).json({ message: "Email already in use" });
     }
 
-    // 2. Hash password
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // 3. Insert user
     const { data: user, error } = await supabase
       .from("users")
       .insert([
@@ -73,21 +66,11 @@ const registerUser = async (req, res) => {
       .select()
       .single();
 
-    if (error) {
-      console.error("DEBUG: Supabase Insert Error:", error);
-      return res.status(400).json({ 
-        message: `Database Error: ${error.message}`,
-        details: error.details,
-        hint: error.hint
-      });
+    if (error || !user) {
+      return res.status(400).json({ message: error?.message || "Registration failed" });
     }
 
-    if (!user) {
-      return res.status(500).json({ message: "User creation failed - No data returned from database." });
-    }
-
-    // 4. Return success
-    return res.status(201).json({
+    res.status(201).json({
       id: user.id,
       _id: user.id,
       name: user.name,
@@ -96,23 +79,19 @@ const registerUser = async (req, res) => {
       isAuthor: user.is_author,
       token: generateToken(user.id),
     });
-
   } catch (err) {
-    console.error("AUTH_ERROR (Register):", err);
-    return res.status(500).json({ 
-      message: err.message, 
-      stack: process.env.NODE_ENV === 'production' ? null : err.stack,
-      debug: "Error in registerUser function"
-    });
+    console.error("Registration failed:", err.message);
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
-const getUserProfile = async (req, res) => {
+export const getUserProfile = async (req, res) => {
   try {
+    const userId = req.user._id || req.user.id;
     const { data: user, error } = await supabase
       .from("users")
       .select("id, name, first_name, email, is_admin, is_author, phone, birth_date, gender, country, province, address, avatar_url")
-      .eq("id", req.user._id || req.user.id)
+      .eq("id", userId)
       .single();
 
     if (error || !user) {
@@ -139,40 +118,29 @@ const getUserProfile = async (req, res) => {
   }
 };
 
-const updateUserProfile = async (req, res) => {
+export const updateUserProfile = async (req, res) => {
   try {
-    const { 
-      name, 
-      firstName, 
-      phone, 
-      birthDate, 
-      gender, 
-      country, 
-      province, 
-      address, 
-      avatarUrl 
-    } = req.body;
+    const userId = req.user._id || req.user.id;
+    const updates = {
+      name: req.body.name,
+      first_name: req.body.firstName,
+      phone: req.body.phone,
+      birth_date: req.body.birthDate,
+      gender: req.body.gender,
+      country: req.body.country,
+      province: req.body.province,
+      address: req.body.address,
+      avatar_url: req.body.avatarUrl,
+    };
 
     const { data: user, error } = await supabase
       .from("users")
-      .update({
-        name,
-        first_name: firstName,
-        phone,
-        birth_date: birthDate,
-        gender,
-        country,
-        province,
-        address,
-        avatar_url: avatarUrl,
-      })
-      .eq("id", req.user._id || req.user.id)
+      .update(updates)
+      .eq("id", userId)
       .select()
       .single();
 
-    if (error) {
-      return res.status(400).json({ message: error.message });
-    }
+    if (error) return res.status(400).json({ message: error.message });
 
     res.json({
       _id: user.id,
@@ -195,21 +163,18 @@ const updateUserProfile = async (req, res) => {
   }
 };
 
-const deleteUser = async (req, res) => {
+export const deleteUser = async (req, res) => {
   try {
     const { error } = await supabase
       .from("users")
       .delete()
       .eq("id", req.user._id || req.user.id);
 
-    if (error) {
-      return res.status(400).json({ message: error.message });
-    }
+    if (error) return res.status(400).json({ message: error.message });
 
-    res.json({ message: "User deleted successfully" });
+    res.json({ message: "Account deleted" });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
 
-export { authUser, registerUser, getUserProfile, updateUserProfile, deleteUser };

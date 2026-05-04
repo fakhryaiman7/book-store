@@ -1,6 +1,5 @@
 import { supabase } from "../config/supabase.js";
 
-// Helper to map Postgres snake_case/id to Mongoose style for frontend compatibility
 const mapBook = (book) => {
   if (!book) return null;
   return {
@@ -19,76 +18,56 @@ const mapBook = (book) => {
   };
 };
 
-
-// @desc    Fetch all books
-// @route   GET /api/books
-// @access  Public
-const getBooks = async (req, res) => {
+export const getBooks = async (req, res) => {
   try {
     const { data: books, error } = await supabase.from("books").select("*");
 
     if (error) {
-      console.error("Supabase Error in getBooks:", error);
-      return res.status(500).json({ message: error.message, details: error });
+      console.error("DB Error [getBooks]:", error);
+      return res.status(500).json({ message: "Failed to fetch books" });
     }
 
-    if (!books) {
-      console.error("Supabase returned null data for books query.");
-      return res.status(500).json({ message: "Failed to retrieve books from database." });
-    }
-
-    res.json(books.map(mapBook));
+    res.json(books?.map(mapBook) || []);
   } catch (err) {
-    console.error("Exception in getBooks:", err);
-    res.status(500).json({ message: err.message, stack: err.stack });
+    res.status(500).json({ message: err.message });
   }
 };
 
-// @desc    Fetch single book
-// @route   GET /api/books/:id
-// @access  Public
-const getBookById = async (req, res) => {
-  const { data: book, error } = await supabase
-    .from("books")
-    .select("*")
-    .eq("id", req.params.id)
-    .single();
-
-  if (error || !book) {
-    res.status(404);
-    throw new Error("Book not found");
-  }
-
-  res.json(mapBook(book));
-};
-
-// @desc    Get website stats
-// @route   GET /api/books/stats
-// @access  Public
-const getStats = async (req, res) => {
+export const getBookById = async (req, res) => {
   try {
-    // 1. Get total books count
-    const { count: booksCount, error: bErr } = await supabase
+    const { data: book, error } = await supabase
       .from("books")
-      .select("*", { count: "exact", head: true });
+      .select("*")
+      .eq("id", req.params.id)
+      .single();
 
-    // 2. Get total users count (Happy Readers)
-    const { count: usersCount, error: uErr } = await supabase
-      .from("users")
-      .select("*", { count: "exact", head: true });
+    if (error || !book) {
+      return res.status(404).json({ message: "Book not found" });
+    }
 
-    // 3. Get unique categories
-    const { data: catData, error: cErr } = await supabase
-      .from("books")
-      .select("category");
+    res.json(mapBook(book));
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
 
-    const categories = new Set(catData?.map(b => b.category).filter(Boolean));
+export const getStats = async (req, res) => {
+  try {
+    const [booksRes, usersRes, catRes] = await Promise.all([
+      supabase.from("books").select("*", { count: "exact", head: true }),
+      supabase.from("users").select("*", { count: "exact", head: true }),
+      supabase.from("books").select("category")
+    ]);
 
-    if (bErr || uErr || cErr) throw new Error("Error fetching statistics");
+    if (booksRes.error || usersRes.error || catRes.error) {
+      throw new Error("Stats lookup failed");
+    }
+
+    const categories = new Set(catRes.data?.map(b => b.category).filter(Boolean));
 
     res.json({
-      booksCount: booksCount || 0,
-      usersCount: usersCount || 0,
+      booksCount: booksRes.count || 0,
+      usersCount: usersRes.count || 0,
       categoriesCount: categories.size || 0
     });
   } catch (err) {
@@ -96,76 +75,59 @@ const getStats = async (req, res) => {
   }
 };
 
-const createBookReview = async (req, res) => {
+export const createBookReview = async (req, res) => {
   const { rating, comment } = req.body;
   const bookId = req.params.id;
   const userId = req.user._id || req.user.id;
 
   try {
-    // 1. Check if user already reviewed
     const { data: existingReview } = await supabase
       .from("book_ratings")
       .select("id")
       .eq("user_id", userId)
       .eq("book_id", bookId)
-      .single();
+      .maybeSingle();
 
     if (existingReview) {
-      return res.status(400).json({ message: "Book already reviewed" });
+      return res.status(400).json({ message: "You already reviewed this book" });
     }
 
-    // 2. Insert review
-    const { error: reviewError } = await supabase
+    const { error: insertErr } = await supabase
       .from("book_ratings")
-      .insert([
-        {
-          user_id: userId,
-          book_id: bookId,
-          rating: Number(rating),
-          comment,
-        },
-      ]);
+      .insert([{ user_id: userId, book_id: bookId, rating: Number(rating), comment }]);
 
-    if (reviewError) {
-      return res.status(400).json({ message: reviewError.message });
-    }
+    if (insertErr) return res.status(400).json({ message: insertErr.message });
 
-    // 3. Update book rating avg/count
     const { data: reviews } = await supabase
       .from("book_ratings")
       .select("rating")
       .eq("book_id", bookId);
 
-    const ratingCount = reviews.length;
-    const ratingAvg = reviews.reduce((acc, item) => item.rating + acc, 0) / ratingCount;
+    if (reviews?.length > 0) {
+      const count = reviews.length;
+      const avg = reviews.reduce((acc, r) => r.rating + acc, 0) / count;
+      
+      await supabase
+        .from("books")
+        .update({ rating_avg: avg, rating_count: count })
+        .eq("id", bookId);
+    }
 
-    await supabase
-      .from("books")
-      .update({
-        rating_avg: ratingAvg,
-        rating_count: ratingCount,
-      })
-      .eq("id", bookId);
-
-    res.status(201).json({ message: "Review added" });
+    res.status(201).json({ message: "Review submitted" });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
 
-const getBookReviews = async (req, res) => {
-  const bookId = req.params.id;
-
+export const getBookReviews = async (req, res) => {
   try {
     const { data: reviews, error } = await supabase
       .from("book_ratings")
       .select("*, users(name, avatar_url)")
-      .eq("book_id", bookId)
+      .eq("book_id", req.params.id)
       .order("created_at", { ascending: false });
 
-    if (error) {
-      return res.status(400).json({ message: error.message });
-    }
+    if (error) return res.status(400).json({ message: error.message });
 
     res.json(reviews);
   } catch (err) {
@@ -173,4 +135,3 @@ const getBookReviews = async (req, res) => {
   }
 };
 
-export { getBooks, getBookById, getStats, createBookReview, getBookReviews };
