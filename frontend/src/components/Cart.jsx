@@ -283,10 +283,12 @@ const Cart = () => {
                   type="text"
                   placeholder="Card Number"
                   maxLength="19"
-                  className="w-full bg-gray-50 dark:bg-gray-800 border-none rounded-2xl p-5 text-sm font-bold focus:ring-2 ring-primary transition-all dark:text-white"
+                  value={cardData.number}
+                  className="w-full bg-gray-50 dark:bg-gray-800 border-none rounded-2xl p-5 text-sm font-bold focus:ring-2 ring-primary transition-all dark:text-white tracking-widest"
                   onChange={(e) => {
-                    let val = e.target.value.replace(/\D/g, '').replace(/(.{4})/g, '$1 ').trim();
-                    setCardData({...cardData, number: val});
+                    const digits = e.target.value.replace(/\D/g, '').slice(0, 16);
+                    const formatted = digits.replace(/(\d{4})(?=\d)/g, '$1 ');
+                    setCardData({...cardData, number: formatted});
                   }}
                 />
               </div>
@@ -296,23 +298,41 @@ const Cart = () => {
                   type="text"
                   placeholder="MM/YY"
                   maxLength="5"
-                  className="w-full bg-gray-50 dark:bg-gray-800 border-none rounded-2xl p-5 text-sm font-bold focus:ring-2 ring-primary transition-all dark:text-white"
-                  onChange={(e) => setCardData({...cardData, expiry: e.target.value})}
+                  value={cardData.expiry}
+                  className="w-full bg-gray-50 dark:bg-gray-800 border-none rounded-2xl p-5 text-sm font-bold focus:ring-2 ring-primary transition-all dark:text-white tracking-widest"
+                  onChange={(e) => {
+                    const digits = e.target.value.replace(/\D/g, '').slice(0, 4);
+                    let formatted = digits;
+                    if (digits.length >= 3) {
+                      formatted = digits.slice(0, 2) + '/' + digits.slice(2);
+                    } else if (digits.length === 2 && cardData.expiry.length === 1) {
+                      formatted = digits + '/';
+                    }
+                    setCardData({...cardData, expiry: formatted});
+                  }}
                 />
                 <input
                   type="text"
                   placeholder="CVC"
                   maxLength="3"
-                  className="w-full bg-gray-50 dark:bg-gray-800 border-none rounded-2xl p-5 text-sm font-bold focus:ring-2 ring-primary transition-all dark:text-white"
-                  onChange={(e) => setCardData({...cardData, cvc: e.target.value})}
+                  value={cardData.cvc}
+                  className="w-full bg-gray-50 dark:bg-gray-800 border-none rounded-2xl p-5 text-sm font-bold focus:ring-2 ring-primary transition-all dark:text-white tracking-widest"
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, '').slice(0, 3);
+                    setCardData({...cardData, cvc: val});
+                  }}
                 />
               </div>
 
               <input
                 type="text"
                 placeholder="Cardholder Name"
-                className="w-full bg-gray-50 dark:bg-gray-800 border-none rounded-2xl p-5 text-sm font-bold focus:ring-2 ring-primary transition-all dark:text-white mb-8"
-                onChange={(e) => setCardData({...cardData, name: e.target.value})}
+                value={cardData.name}
+                className="w-full bg-gray-50 dark:bg-gray-800 border-none rounded-2xl p-5 text-sm font-bold focus:ring-2 ring-primary transition-all dark:text-white mb-8 uppercase"
+                onChange={(e) => {
+                  const val = e.target.value.replace(/[^a-zA-Z\s]/g, '');
+                  setCardData({...cardData, name: val});
+                }}
               />
 
               <button
