@@ -23,7 +23,6 @@ const resources = {
       "nav_login": "Login",
       "nav_logout": "Logout",
       "nav_admin": "Admin",
-      "import_books": "Import Books",
       "dark_mode": "Dark Mode",
       "light_mode": "Light Mode",
       "currency": "EGP",
@@ -167,6 +166,8 @@ const resources = {
       "valid_until": "Valid until",
       "download": "Download",
       "select_duration": "Select Duration",
+      "other_days_placeholder": "Other days",
+      "apply": "Apply",
       "permanent_collect": "Permanent Collection",
       "added_to_cart": "Added to Cart",
       "to_buy_or_rent": "to buy or rent books",
@@ -396,7 +397,12 @@ const resources = {
       "your_review": "Your Review",
       "review_placeholder": "Share your thoughts about this book...",
       "submit_review": "Submit Review",
-      "no_reviews": "No reviews yet. Be the first to rate this book!"
+      "no_reviews": "No reviews yet. Be the first to rate this book!",
+      "secure_payment": "Secure Payment",
+      "enter_card_details": "Enter Card Details",
+      "cardholder": "Cardholder Name",
+      "expiry": "Expiry Date",
+      "confirm_and_pay": "Confirm & Pay"
     }
   },
   ar: {
@@ -569,6 +575,8 @@ const resources = {
       "valid_until": "صالح حتى",
       "download": "تحميل",
       "select_duration": "اختر المدة",
+      "other_days_placeholder": "أيام أخرى",
+      "apply": "تطبيق",
       "permanent_collect": "اقتناء دائم",
       "added_to_cart": "تمت الإضافة للسلة",
       "to_buy_or_rent": "لشراء أو استعارة الكتب",
@@ -802,7 +810,12 @@ const resources = {
       "your_review": "تقييمك",
       "review_placeholder": "شاركنا رأيك في هذا الكتاب...",
       "submit_review": "إرسال التقييم",
-      "no_reviews": "لا توجد تقييمات بعد. كن أول من يقيم هذا الكتاب!"
+      "no_reviews": "لا توجد تقييمات بعد. كن أول من يقيم هذا الكتاب!",
+      "secure_payment": "الدفع الآمن",
+      "enter_card_details": "أدخل بيانات البطاقة",
+      "cardholder": "اسم حامل البطاقة",
+      "expiry": "تاريخ الانتهاء",
+      "confirm_and_pay": "تأكيد ودفع"
     }
   }
 };

@@ -22,7 +22,6 @@ import AdminDashboard from "./pages/AdminDashboard";
 import AdminBooks from "./pages/AdminBooks";
 import AdminUsers from "./pages/AdminUsers";
 import AdminRentals from "./pages/AdminRentals";
-import AdminImport from "./pages/AdminImport";
 import Shop from "./pages/Shop";
 import Favorites from "./pages/Favorites";
 import Profile from "./pages/Profile";
@@ -72,7 +71,7 @@ const AppLayout = () => {
             <Route path="/admin/books" element={<AdminBooks />} />
             <Route path="/admin/rentals" element={<AdminRentals />} />
             <Route path="/admin/users" element={<AdminUsers />} />
-            <Route path="/admin/import" element={<AdminImport />} />
+            
           </Route>
         </Routes>
       </main>

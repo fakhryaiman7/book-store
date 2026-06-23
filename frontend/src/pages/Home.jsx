@@ -6,7 +6,7 @@ import { AuthContext } from "../context/AuthContext";
 import { useTranslation } from "react-i18next";
 import FavoriteButton from "../components/FavoriteButton";
 
-/* ─── Helpers ─── */
+// helpers
 const fmt = (v, t) => `${v || 0} ${t ? t("currency") : "EGP"}`;
 
 const CATEGORIES = [
@@ -22,7 +22,7 @@ const CATEGORIES = [
 
 const BOOKS_PER_PAGE = 8;
 
-/* ─── BookCard ─── */
+// book card component
 const HomeBookCard = ({ book }) => {
   const { t } = useTranslation();
   const rentalPrice   = book.rentalPrice   || book.rental_price   || book.pricePerDay || book.price_per_day || 0;
@@ -110,7 +110,7 @@ const HomeBookCard = ({ book }) => {
   );
 };
 
-/* ─── Main Home Component ─── */
+// main home component
 const Home = () => {
   const [books,       setBooks]       = useState([]);
   const [filtered,    setFiltered]    = useState([]);
@@ -280,7 +280,7 @@ const Home = () => {
         `}} />
       </section>
 
-      {/* ─── CATEGORIES ─── */}
+      {/* categories */}
       <section className="border-t border-gray-50 dark:border-gray-900 bg-white dark:bg-gray-950 py-8" id="books">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3 overflow-x-auto pb-4 scrollbar-hide">
@@ -302,7 +302,7 @@ const Home = () => {
         </div>
       </section>
 
-      {/* ─── SEARCH BAR ─── */}
+      {/* search bar */}
       <section className="bg-gray-50/50 dark:bg-gray-900/20 py-6 border-t border-gray-100 dark:border-gray-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col sm:flex-row items-center gap-4">
@@ -330,7 +330,7 @@ const Home = () => {
         </div>
       </section>
 
-      {/* ─── GRID ─── */}
+      {/* books grid */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <h2 className="text-2xl font-black text-gray-900 dark:text-white mb-8">
           {category ? (
@@ -348,7 +348,7 @@ const Home = () => {
         )}
       </section>
 
-      {/* ─── PAGINATION ─── */}
+      {/* pagination */}
       {!loading && totalPages > 1 && (
         <div className="flex justify-center items-center gap-2 pb-16">
           <button

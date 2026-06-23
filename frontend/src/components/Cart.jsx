@@ -235,97 +235,140 @@ const Cart = () => {
       {/* ── FAKE PAYMENT MODAL (PORTALED) ── */}
       {showPaymentModal && createPortal(
         <div 
-          className="fixed inset-0 z-[10000] flex items-center justify-center p-6 bg-black/80 backdrop-blur-sm"
+          className="fixed inset-0 z-[10000] flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-md animate-in fade-in duration-300"
           onClick={() => setShowPaymentModal(false)}
         >
           <div 
-            className="bg-white dark:bg-gray-900 w-full max-w-md rounded-[3rem] p-10 shadow-2xl border border-white/5 relative overflow-hidden"
+            className="bg-white dark:bg-gray-900/95 w-full max-w-[420px] rounded-[2.5rem] shadow-2xl border border-gray-100 dark:border-white/10 relative overflow-hidden flex flex-col animate-in zoom-in-95 duration-300"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Design accents */}
-            <div className="absolute top-0 right-0 p-8 pointer-events-none">
-               <div className="w-12 h-12 bg-primary/20 rounded-full blur-xl" />
+            {/* Header */}
+            <div className="p-8 pb-6 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center bg-gray-50/50 dark:bg-gray-900/50">
+               <div className="flex items-center gap-4">
+                 <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
+                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                   </svg>
+                 </div>
+                 <div>
+                    <h3 className="text-xl font-black text-gray-900 dark:text-white tracking-tight">{t("secure_payment")}</h3>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">{t("enter_card_details")}</p>
+                 </div>
+               </div>
+               <button onClick={() => setShowPaymentModal(false)} className="w-10 h-10 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center justify-center text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all">
+                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+               </button>
             </div>
 
-            <div className="flex justify-between items-center mb-10 relative z-10">
-               <div>
-                  <h3 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight">{t("secure_payment") || "Secure Payment"}</h3>
-                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{t("enter_card_details") || "Pay with Credit/Debit Card"}</p>
-               </div>
-               <button onClick={() => setShowPaymentModal(false)} className="w-10 h-10 rounded-full bg-gray-50 dark:bg-gray-800 flex items-center justify-center text-gray-400 hover:text-red-500 transition-colors">✕</button>
-            </div>
-
-            {/* Visual Card Card */}
-            <div className="bg-gradient-to-br from-indigo-600 via-primary to-purple-600 rounded-3xl p-8 mb-10 shadow-2xl relative group overflow-hidden">
-               <div className="absolute top-0 right-0 p-6 opacity-40">
-                  <svg className="w-10 h-10" viewBox="0 0 24 24" fill="currentColor text-white"><path d="M21 15.46V19a2 2 0 01-2 2H5a2 2 0 01-2-2v-3.54a2 2 0 01.37-1.16l1.23-1.84A4 4 0 017.86 11h8.28a4 4 0 013.26 1.46l1.23 1.84a2 2 0 01.37 1.16zM12 13a1 1 0 100-2 1 1 0 000 2z"/></svg>
-               </div>
-               
-               <p className="text-white/60 text-[8px] font-black uppercase tracking-widest mb-6">Platinum Rewards Card</p>
-               <p className="text-xl lg:text-2xl font-mono text-white tracking-[0.3em] mb-8 drop-shadow-lg">
-                 {cardData.number || "•••• •••• •••• ••••"}
-               </p>
-               <div className="flex justify-between items-end">
-                  <div>
-                    <p className="text-white/40 text-[7px] font-black uppercase tracking-widest mb-1">{t("cardholder") || "Cardholder Name"}</p>
-                    <p className="text-white text-xs font-bold uppercase tracking-widest truncate">{cardData.name || "YOUR NAME"}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-white/40 text-[7px] font-black uppercase tracking-widest mb-1">{t("expiry") || "Expiry"}</p>
-                    <p className="text-white text-xs font-bold tracking-widest">{cardData.expiry || "MM/YY"}</p>
-                  </div>
-               </div>
-            </div>
-
-            <div className="space-y-6">
-              <div className="space-y-2">
-                <input
-                  type="text"
-                  placeholder="Card Number"
-                  maxLength="19"
-                  className="w-full bg-gray-50 dark:bg-gray-800 border-none rounded-2xl p-5 text-sm font-bold focus:ring-2 ring-primary transition-all dark:text-white"
-                  onChange={(e) => {
-                    let val = e.target.value.replace(/\D/g, '').replace(/(.{4})/g, '$1 ').trim();
-                    setCardData({...cardData, number: val});
-                  }}
-                />
+            <div className="p-8 pt-6 space-y-6">
+              {/* Virtual Card (Glassmorphic) */}
+              <div className="relative rounded-3xl p-6 overflow-hidden shadow-xl bg-gradient-to-br from-gray-900 to-gray-800 dark:from-primary dark:to-indigo-900 text-white">
+                 <div className="absolute top-0 right-0 p-4 opacity-30">
+                    <svg className="w-12 h-12" viewBox="0 0 24 24" fill="currentColor text-white"><path d="M21 15.46V19a2 2 0 01-2 2H5a2 2 0 01-2-2v-3.54a2 2 0 01.37-1.16l1.23-1.84A4 4 0 017.86 11h8.28a4 4 0 013.26 1.46l1.23 1.84a2 2 0 01.37 1.16zM12 13a1 1 0 100-2 1 1 0 000 2z"/></svg>
+                 </div>
+                 <div className="mb-8">
+                   <div className="w-10 h-7 rounded bg-white/20 mb-2"></div>
+                 </div>
+                 <p className="text-xl lg:text-2xl font-mono tracking-widest mb-6 text-white drop-shadow-md">
+                   {cardData.number || "•••• •••• •••• ••••"}
+                 </p>
+                 <div className="flex justify-between items-end">
+                    <div className="max-w-[60%]">
+                      <p className="text-white/50 text-[8px] font-black uppercase tracking-widest mb-1">{t("cardholder")}</p>
+                      <p className="text-white text-xs font-bold uppercase tracking-widest truncate">{cardData.name || "YOUR NAME"}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-white/50 text-[8px] font-black uppercase tracking-widest mb-1">{t("expiry")}</p>
+                      <p className="text-white text-xs font-bold tracking-widest">{cardData.expiry || "MM/YY"}</p>
+                    </div>
+                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <input
-                  type="text"
-                  placeholder="MM/YY"
-                  maxLength="5"
-                  className="w-full bg-gray-50 dark:bg-gray-800 border-none rounded-2xl p-5 text-sm font-bold focus:ring-2 ring-primary transition-all dark:text-white"
-                  onChange={(e) => setCardData({...cardData, expiry: e.target.value})}
-                />
-                <input
-                  type="text"
-                  placeholder="CVC"
-                  maxLength="3"
-                  className="w-full bg-gray-50 dark:bg-gray-800 border-none rounded-2xl p-5 text-sm font-bold focus:ring-2 ring-primary transition-all dark:text-white"
-                  onChange={(e) => setCardData({...cardData, cvc: e.target.value})}
-                />
+              {/* Form */}
+              <div className="space-y-4">
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="0000 0000 0000 0000"
+                    maxLength="19"
+                    value={cardData.number}
+                    className="w-full bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 pl-12 text-sm font-bold text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none"
+                    onChange={(e) => {
+                      let val = e.target.value.replace(/\D/g, '');
+                      val = val.substring(0, 16);
+                      val = val.replace(/(.{4})/g, '$1 ').trim();
+                      setCardData({...cardData, number: val});
+                    }}
+                  />
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder="MM/YY"
+                      maxLength="5"
+                      value={cardData.expiry}
+                      className="w-full bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 pl-12 text-sm font-bold text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none"
+                      onChange={(e) => {
+                        let val = e.target.value.replace(/\D/g, '');
+                        if (val.length > 2) {
+                          val = val.substring(0, 2) + '/' + val.substring(2, 4);
+                        }
+                        setCardData({...cardData, expiry: val});
+                      }}
+                    />
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                    </div>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder="CVC"
+                      maxLength="3"
+                      value={cardData.cvc}
+                      className="w-full bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 pl-12 text-sm font-bold text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none"
+                      onChange={(e) => {
+                        let val = e.target.value.replace(/\D/g, '').substring(0, 3);
+                        setCardData({...cardData, cvc: val});
+                      }}
+                    />
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="relative pb-2">
+                  <input
+                    type="text"
+                    placeholder={t("cardholder")}
+                    value={cardData.name}
+                    className="w-full bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 pl-12 text-sm font-bold text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none"
+                    onChange={(e) => setCardData({...cardData, name: e.target.value})}
+                  />
+                  <div className="absolute inset-y-0 left-0 pl-4 pt-4 flex items-start pointer-events-none text-gray-400">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                  </div>
+                </div>
+
+                <button
+                  onClick={checkoutHandler}
+                  disabled={cardData.number.length < 16}
+                  className={`w-full py-5 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl transition-all active:scale-95 flex items-center justify-center gap-3 ${
+                    cardData.number.length < 16 
+                      ? "bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed shadow-none border border-gray-200 dark:border-gray-700" 
+                      : "bg-primary text-white shadow-primary/30 hover:shadow-primary/40 hover:-translate-y-0.5"
+                  }`}
+                >
+                  {t("confirm_and_pay")} 
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+                </button>
               </div>
-
-              <input
-                type="text"
-                placeholder="Cardholder Name"
-                className="w-full bg-gray-50 dark:bg-gray-800 border-none rounded-2xl p-5 text-sm font-bold focus:ring-2 ring-primary transition-all dark:text-white mb-8"
-                onChange={(e) => setCardData({...cardData, name: e.target.value})}
-              />
-
-              <button
-                onClick={checkoutHandler}
-                disabled={cardData.number.length < 16}
-                className={`w-full py-6 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl transition-all active:scale-95 flex items-center justify-center gap-4 ${
-                  cardData.number.length < 16 
-                    ? "bg-gray-100 text-gray-400 cursor-not-allowed" 
-                    : "bg-primary text-white shadow-primary/30 hover:shadow-primary/40"
-                }`}
-              >
-                {t("confirm_and_pay") || "Confirm & Pay"}
-              </button>
             </div>
           </div>
         </div>,

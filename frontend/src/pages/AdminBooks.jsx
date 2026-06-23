@@ -125,7 +125,7 @@ const AdminBooks = () => {
     setShowModal(true);
   };
 
-  // --------------- Cover image upload ---------------
+  // Cover image upload
   const ALLOWED_IMAGE_EXTS = ["jpg", "jpeg", "png", "webp"];
   const ALLOWED_IMAGE_MIME = ["image/jpeg", "image/png", "image/webp"];
   const MAX_IMAGE_BYTES = 200 * 1024; // 200 KB
