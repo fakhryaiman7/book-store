@@ -257,10 +257,9 @@ const AILibrarian = ({ allBooks }) => {
           <svg className="w-6 h-6 text-white relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>
         ) : (
           <div className="relative z-10 flex flex-col items-center">
-            <svg className="w-8 h-8 text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.4)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
+            <svg className="w-7 h-7 text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.4)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
-            <span className="text-[8px] font-black tracking-tighter text-white/80">AI</span>
           </div>
         )}
         <div className="absolute inset-0 rounded-full border-2 border-white/20 animate-ping opacity-20" />
