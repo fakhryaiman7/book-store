@@ -339,6 +339,33 @@ const BookDetails = () => {
                             </button>
                           ))}
                         </div>
+                        {/* Custom days input */}
+                        <div className="flex items-center gap-3 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl px-4 py-3 focus-within:border-primary/50 transition-all">
+                          <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest whitespace-nowrap">
+                            {t("custom_days") || "Custom"}
+                          </span>
+                          <div className="flex items-center gap-2 ml-auto">
+                            <button
+                              onClick={() => setRentDays(prev => Math.max(1, prev - 1))}
+                              className="w-8 h-8 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 font-black text-lg flex items-center justify-center hover:bg-primary hover:text-white transition-all active:scale-90"
+                            >−</button>
+                            <input
+                              type="number"
+                              min="1"
+                              max="365"
+                              value={rentDays}
+                              onChange={(e) => {
+                                const v = parseInt(e.target.value);
+                                if (!isNaN(v) && v >= 1 && v <= 365) setRentDays(v);
+                              }}
+                              className="w-14 text-center font-black text-sm text-gray-900 dark:text-white bg-transparent outline-none"
+                            />
+                            <button
+                              onClick={() => setRentDays(prev => Math.min(365, prev + 1))}
+                              className="w-8 h-8 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 font-black text-lg flex items-center justify-center hover:bg-primary hover:text-white transition-all active:scale-90"
+                            >+</button>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   ) : (
