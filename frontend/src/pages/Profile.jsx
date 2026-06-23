@@ -21,8 +21,6 @@ const Profile = () => {
   const [formData, setFormData] = useState({
     name: "",
     firstName: "",
-    email: "",
-    password: "",
     phone: "",
     birthDate: "",
     gender: "",
@@ -41,8 +39,6 @@ const Profile = () => {
       setFormData({
         name: user.name || "",
         firstName: user.firstName || "",
-        email: user.email || "",
-        password: "",
         phone: user.phone || "",
         birthDate: user.birthDate || "",
         gender: user.gender || "",
@@ -194,32 +190,6 @@ const Profile = () => {
           )}
 
           <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Email */}
-            <div className="space-y-2">
-              <label className="text-sm font-bold text-gray-700 dark:text-gray-300">{t("email") || "Email Address"}</label>
-              <input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none text-gray-900 dark:text-white"
-                required
-              />
-            </div>
-
-            {/* Password */}
-            <div className="space-y-2">
-              <label className="text-sm font-bold text-gray-700 dark:text-gray-300">{t("new_password") || "New Password"}</label>
-              <input
-                type="password"
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                placeholder={t("leave_blank_keep_current") || "Leave blank to keep current"}
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none text-gray-900 dark:text-white"
-              />
-            </div>
-
             {/* Name */}
             <div className="space-y-2">
               <label className="text-sm font-bold text-gray-700 dark:text-gray-300">{t("full_name") || "Full Name"}</label>

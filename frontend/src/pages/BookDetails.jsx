@@ -20,7 +20,6 @@ const BookDetails = () => {
   const [error, setError] = useState(null);
   const [mode, setMode] = useState("rent"); // "rent" | "buy"
   const [rentDays, setRentDays] = useState(7);
-  const [customDays, setCustomDays] = useState("");
   const [userAccess, setUserAccess] = useState(null); // null | { access_type, expires_at }
   const [accessLoading, setAccessLoading] = useState(false);
   const [added, setAdded] = useState(false);
@@ -335,32 +334,10 @@ const BookDetails = () => {
                         </label>
                         <div className="grid grid-cols-5 gap-3">
                           {[1, 3, 7, 14, 30].map((d) => (
-                            <button key={d} onClick={() => { setRentDays(d); setCustomDays(""); }} className={`py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all ${rentDays === d ? "bg-primary text-white shadow-xl shadow-primary/20" : "bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 text-gray-400 hover:border-primary/30"}`}>
+                            <button key={d} onClick={() => setRentDays(d)} className={`py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all ${rentDays === d ? "bg-primary text-white shadow-xl shadow-primary/20" : "bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 text-gray-400 hover:border-primary/30"}`}>
                               {d}
                             </button>
                           ))}
-                        </div>
-                        <div className="mt-3 flex items-center gap-3">
-                          <input
-                            type="number"
-                            min={1}
-                            value={customDays}
-                            onChange={(e) => setCustomDays(e.target.value)}
-                            placeholder={t("other_days_placeholder") || "Other days"
-                            }
-                            className="w-32 py-3 px-4 rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 text-sm font-black placeholder-gray-400"
-                          />
-                          <button
-                            onClick={() => {
-                              const v = parseInt(customDays, 10);
-                              if (!isNaN(v) && v > 0) {
-                                setRentDays(v);
-                              }
-                            }}
-                            className="py-3 px-4 bg-primary text-white rounded-2xl font-black text-xs uppercase tracking-widest"
-                          >
-                            {t("apply") || "Apply"}
-                          </button>
                         </div>
                       </div>
                     </div>

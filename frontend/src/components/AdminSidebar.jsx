@@ -14,7 +14,7 @@ const AdminSidebar = () => {
     { name: t("manage_books") || "Manage Books", path: "/admin/books", icon: "📚" },
     { name: t("orders_rentals") || "Orders / Rentals", path: "/admin/rentals", icon: "🔄" },
     { name: t("users") || "Users", path: "/admin/users", icon: "👥", adminOnly: true },
-    
+    { name: t("import_books") || "Import Books", path: "/admin/import", icon: "📥", adminOnly: true },
   ].filter(link => !link.adminOnly || (user?.isAdmin || user?.role === "admin"));
 
   const portalTitle = user?.isAdmin ? (t("admin_portal") || "Admin Portal") : (t("author_portal") || "Author Portal");

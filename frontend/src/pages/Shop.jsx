@@ -7,12 +7,12 @@ import { AuthContext } from "../context/AuthContext";
 import { useTranslation } from "react-i18next";
 import FavoriteButton from "../components/FavoriteButton";
 
-// helpers
+/* ─────────────────────────────────── helpers ─── */
 const fmt = (v, t) => `${v || 0} ${t ? t("currency") : "EGP"}`;
 
 const BOOKS_PER_PAGE = 12;
 
-// rent modal component
+/* ─────────────────────────────────── RentModal ─── */
 const RentModal = ({ book, onClose, onConfirm }) => {
   const { t } = useTranslation();
   const [days, setDays] = useState(7);
@@ -89,7 +89,7 @@ const RentModal = ({ book, onClose, onConfirm }) => {
   );
 };
 
-// book card for shop listing
+/* ─────────────────────────────────── ShopBookCard ─── */
 const ShopBookCard = ({ book, access, onBuy, onRent, addedKey }) => {
   const { t } = useTranslation();
   const inStock = (book.countInStock ?? book.count_in_stock ?? 0) > 0;
@@ -246,7 +246,7 @@ const ShopBookCard = ({ book, access, onBuy, onRent, addedKey }) => {
   );
 };
 
-// main shop page
+/* ─────────────────────────────────── Shop Page ─── */
 const Shop = () => {
   const { addToCart } = useContext(CartContext);
   const { user }      = useContext(AuthContext);
@@ -393,7 +393,7 @@ const Shop = () => {
 
   const clearFilters = () => { setSearch(""); setCategory(""); setSortBy("default"); };
 
-  // render
+  /* ─────────────────────────────── JSX ─── */
   return (
     <div className="bg-white dark:bg-gray-950 min-h-screen transition-colors duration-200">
 

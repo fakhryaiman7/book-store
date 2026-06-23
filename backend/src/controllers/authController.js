@@ -133,26 +133,6 @@ export const updateUserProfile = async (req, res) => {
       avatar_url: req.body.avatarUrl,
     };
 
-    if (req.body.email) {
-      // Check if another user already has this email
-      const { data: existingUser } = await supabase
-        .from("users")
-        .select("id")
-        .eq("email", req.body.email)
-        .neq("id", userId)
-        .maybeSingle();
-      
-      if (existingUser) {
-        return res.status(400).json({ message: "Email is already in use by another account" });
-      }
-      updates.email = req.body.email;
-    }
-
-    if (req.body.password) {
-      const salt = await bcrypt.genSalt(10);
-      updates.password = await bcrypt.hash(req.body.password, salt);
-    }
-
     const { data: user, error } = await supabase
       .from("users")
       .update(updates)

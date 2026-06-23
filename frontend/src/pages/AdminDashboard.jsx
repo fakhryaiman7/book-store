@@ -96,7 +96,14 @@ const AdminDashboard = () => {
             <p className="text-gray-500 dark:text-gray-400 mt-2 font-medium">{user?.isAdmin ? (t("welcome_admin") || "Welcome back, Administrator") : (t("welcome_author") || "Welcome back, Author")} <span className="text-primary font-black">{user?.name}</span> {stats.v && <span className="text-[10px] ml-2 opacity-50">Backend: {stats.v}</span>}</p>
           </div>
           <div className="flex flex-wrap gap-4">
-            
+            {user?.isAdmin && (
+              <button 
+                onClick={() => navigate("/admin/import")} 
+                className="bg-white dark:bg-gray-900 text-gray-900 dark:text-white border border-gray-100 dark:border-gray-800 font-black py-3 px-6 rounded-2xl shadow-sm hover:shadow-xl transition-all flex items-center space-x-2 rtl:space-x-reverse text-xs uppercase tracking-widest hover:border-primary/20"
+              >
+                <span>📥</span><span>{t("import_books") || "Import Books"}</span>
+              </button>
+            )}
             <button 
               onClick={handleGenerateReport} 
               className="bg-primary text-white font-black py-3 px-6 rounded-2xl shadow-xl shadow-primary/20 hover:bg-opacity-90 transition-all flex items-center space-x-2 rtl:space-x-reverse text-xs uppercase tracking-widest"

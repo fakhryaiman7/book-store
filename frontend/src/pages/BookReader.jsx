@@ -5,11 +5,7 @@ import { AuthContext } from "../context/AuthContext";
 import axios from "../api/axios";
 import { useTranslation } from "react-i18next";
 import { ReactReader } from "react-reader";
-import { Document, Page, pdfjs } from 'react-pdf';
-import 'react-pdf/dist/Page/AnnotationLayer.css';
-import 'react-pdf/dist/Page/TextLayer.css';
 
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
 const BookReader = () => {
   const { bookId } = useParams();
@@ -34,25 +30,11 @@ const BookReader = () => {
   // PDF viewer mode: "iframe" (direct embed) | "google" (Google Docs viewer)
   const [pdfMode, setPdfMode] = useState("iframe");
   const [pdfLoadError, setPdfLoadError] = useState(false);
-  const [pdfNumPages, setPdfNumPages] = useState(null);
-  const [pdfPageNumber, setPdfPageNumber] = useState(1);
-  const [pdfScale, setPdfScale] = useState(1.0);
-
-  // Refs for keyboard navigation (to avoid stale closures)
-  const isPdfRef = useRef(false);
-  const isEpubRef = useRef(false);
-  const isSummaryModeRef = useRef(false);
-  const pdfNumPagesRef = useRef(null);
-
-  function onPdfDocumentLoadSuccess({ numPages }) {
-    setPdfNumPages(numPages);
-    setPdfPageNumber(1);
-    setPdfLoadError(false);
-  }
-
+  
   // EPUB viewer specific state
   const [location, setLocation] = useState(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isSummaryMode, setIsSummaryMode] = useState(false);
   const [summarySubMode, setSummarySubMode] = useState("quick"); // quick | deep | insights
   const [bookmarks, setBookmarks] = useState([]);
@@ -166,7 +148,7 @@ const BookReader = () => {
     }
   }, [location]);
 
-  // content protection for rentals
+  // ─── Content Protection ──────────────────────────────────────────────────
   useEffect(() => {
     if (access?.access_type !== 'rental') return;
 
@@ -210,40 +192,7 @@ const BookReader = () => {
     };
   }, [access]);
 
-  // keyboard navigation
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      // Ignore key events if focused on input/textarea
-      if (
-        e.target.tagName === 'INPUT' ||
-        e.target.tagName === 'TEXTAREA' ||
-        e.target.isContentEditable
-      ) {
-        return;
-      }
-
-      if (e.key === 'ArrowRight' || e.key === 'PageDown') {
-        if (isPdfRef.current && !isSummaryModeRef.current) {
-          setPdfPageNumber((prev) => Math.min(pdfNumPagesRef.current || 1, prev + 1));
-        } else if (isEpubRef.current && !isSummaryModeRef.current && renditionRef.current) {
-          renditionRef.current.next();
-        }
-      } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
-        if (isPdfRef.current && !isSummaryModeRef.current) {
-          setPdfPageNumber((prev) => Math.max(1, prev - 1));
-        } else if (isEpubRef.current && !isSummaryModeRef.current && renditionRef.current) {
-          renditionRef.current.prev();
-        }
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, []); // runs once - reads live values via refs
-
-  // theme styles
+  // ─── Theme styles ──────────
   const baseReaderStyles = {
     fontFamily: "'Merriweather', 'Georgia', serif",
     lineHeight: `${settings.lineHeight} !important`,
@@ -340,7 +289,7 @@ const BookReader = () => {
     }
   }, [settings, readerTheme, renditionRef]);
 
-  // figure out the file type and source
+  // ─── Derive file info ─────────────────────────────────────────────────────────
   const sourceFile    = book?.bookFileUrl || book?.book_file_url;
   const previewFile   = book?.previewFileUrl || book?.preview_file_url;
   
@@ -394,12 +343,6 @@ const BookReader = () => {
   const daysLeft   = expiresAt
     ? Math.max(0, Math.ceil((expiresAt - new Date()) / (1000 * 60 * 60 * 24)))
     : null;
-
-  // Sync refs for keyboard navigation (safe to do during render)
-  isPdfRef.current = !!isPdf;
-  isEpubRef.current = !!isEpub;
-  isSummaryModeRef.current = isSummaryMode;
-  pdfNumPagesRef.current = pdfNumPages;
 
   if (loading) return (
     <div className="flex justify-center items-center min-h-screen bg-gray-100 dark:bg-gray-950">
@@ -463,10 +406,10 @@ const BookReader = () => {
 
       {/* ── Toolbar ── */}
       <div className={`sticky top-0 z-40 border-b transition-all duration-500 shadow-sm ${s.toolbar}`}>
-        <div className="max-w-screen-2xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
+        <div className="max-w-screen-2xl mx-auto px-4 py-3 grid grid-cols-3 items-center gap-4">
 
           {/* Left: back button */}
-          <div className="flex items-center gap-3 shrink-0">
+          <div className="flex items-center gap-3 justify-start">
             <Link
               to="/my-library"
               className={`group flex items-center justify-center w-10 h-10 rounded-2xl transition-all ${theme === "dark" ? "bg-gray-800/50 hover:bg-gray-800 text-gray-300 hover:text-white" : theme === "sepia" ? "bg-[#5B4636]/10 hover:bg-[#5B4636]/20 text-[#5B4636]" : "bg-gray-100/70 hover:bg-gray-200 text-gray-500 hover:text-gray-900"}`}
@@ -479,7 +422,7 @@ const BookReader = () => {
           </div>
 
           {/* Center: book info */}
-          <div className="min-w-0 flex-1 flex flex-col items-center hidden sm:flex px-4">
+          <div className="min-w-0 flex flex-col items-center">
             <h1 className={`text-sm font-black truncate tracking-tight text-center w-full max-w-[250px] lg:max-w-[400px] ${theme === "dark" ? "text-gray-100" : theme === "sepia" ? "text-[#433422]" : "text-gray-900"}`}>
               {book?.title || t("loading_book") || "Loading Book..."}
             </h1>
@@ -489,7 +432,7 @@ const BookReader = () => {
           </div>
 
           {/* Right: controls */}
-          <div className="flex items-center gap-2 lg:gap-4 shrink-0">
+          <div className="flex items-center gap-4 justify-end">
 
             {/* Access badge */}
             <div className="hidden xl:block">
@@ -541,6 +484,14 @@ const BookReader = () => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
                 </svg>
               </button>
+
+              <button
+                onClick={() => setIsSettingsOpen(!isSettingsOpen)}
+                className={`w-10 h-10 flex items-center justify-center rounded-2xl transition-all ${isSettingsOpen ? "bg-primary text-white shadow-lg shadow-primary/20" : theme === "dark" ? "bg-gray-800/50 hover:bg-gray-800 text-gray-300 hover:text-white" : theme === "sepia" ? "bg-[#5B4636]/10 hover:bg-[#5B4636]/20 text-[#5B4636]" : "bg-gray-100/70 hover:bg-gray-200 text-gray-500 hover:text-gray-900"}`}
+                title="Settings"
+              >
+                <span className="font-serif font-bold text-lg leading-none">AA</span>
+              </button>
             </div>
 
             {/* Theme switcher */}
@@ -561,6 +512,63 @@ const BookReader = () => {
             </div>
           </div>
         </div>
+
+        {/* ── Settings Panel ── */}
+        {isSettingsOpen && (
+          <div className={`border-t animate-in slide-in-from-top-4 duration-300 transition-colors ${theme === 'dark' ? 'bg-[#0F1115] border-gray-800' : theme === 'sepia' ? 'bg-[#F4ECD8] border-[#E5D7B7]' : 'bg-white border-gray-100'}`}>
+            <div className="max-w-4xl mx-auto px-8 py-6 flex flex-wrap items-center justify-center gap-12">
+              
+              {/* Font Size */}
+              <div className="flex flex-col gap-3">
+                <span className={`text-[10px] font-black uppercase tracking-[0.2em] opacity-40 ${theme === 'dark' ? 'text-white' : 'text-black'}`}>Text Size</span>
+                <div className="flex items-center gap-4">
+                  <button onClick={() => setSettings(p => ({ ...p, fontSize: Math.max(12, p.fontSize - 2) }))} className={`w-8 h-8 rounded-xl flex items-center justify-center border font-bold ${theme === 'dark' ? 'border-gray-800 hover:bg-gray-800' : 'border-gray-200 hover:bg-gray-50'}`}>-</button>
+                  <span className={`text-sm font-black w-8 text-center ${s.text}`}>{settings.fontSize}</span>
+                  <button onClick={() => setSettings(p => ({ ...p, fontSize: Math.min(48, p.fontSize + 2) }))} className={`w-8 h-8 rounded-xl flex items-center justify-center border font-bold ${theme === 'dark' ? 'border-gray-800 hover:bg-gray-800' : 'border-gray-200 hover:bg-gray-50'}`}>+</button>
+                </div>
+              </div>
+
+              {/* Reading Width */}
+              <div className="flex flex-col gap-3">
+                <span className={`text-[10px] font-black uppercase tracking-[0.2em] opacity-40 ${theme === 'dark' ? 'text-white' : 'text-black'}`}>Reading Width</span>
+                <div className={`p-1 flex rounded-xl ${theme === 'dark' ? 'bg-gray-950' : 'bg-gray-100'}`}>
+                  {[
+                    { id: 500, label: 'Narrow' },
+                    { id: 760, label: 'Normal' },
+                    { id: 1000, label: 'Wide' },
+                  ].map(w => (
+                    <button
+                      key={w.id}
+                      onClick={() => setSettings(p => ({ ...p, readingWidth: w.id }))}
+                      className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${settings.readingWidth === w.id ? 'bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-white' : 'text-gray-500 hover:text-gray-700'}`}
+                    >
+                      {w.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Line Height */}
+              <div className="flex flex-col gap-3">
+                <span className={`text-[10px] font-black uppercase tracking-[0.2em] opacity-40 ${theme === 'dark' ? 'text-white' : 'text-black'}`}>Line Spacing</span>
+                <div className="flex items-center gap-4">
+                  {[1.4, 1.8, 2.2].map(lh => (
+                    <button
+                      key={lh}
+                      onClick={() => setSettings(p => ({ ...p, lineHeight: lh }))}
+                      className={`w-10 h-10 rounded-xl flex flex-col items-center justify-center border gap-1 transition-all ${settings.lineHeight === lh ? 'border-primary bg-primary/5' : theme === 'dark' ? 'border-gray-800 hover:bg-gray-800' : 'border-gray-200 hover:bg-gray-50'}`}
+                    >
+                      <div className="w-4 h-0.5 bg-current opacity-40"></div>
+                      <div className="w-4 h-0.5 bg-current" style={{ marginTop: `${(lh - 1.4) * 4}px`, marginBottom: `${(lh - 1.4) * 4}px` }}></div>
+                      <div className="w-4 h-0.5 bg-current opacity-40"></div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ── Reading area ── */}
@@ -583,11 +591,11 @@ const BookReader = () => {
                       </div>
                       <div>
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Smart Summary</span>
+                          <span className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">AI Powered Assistant</span>
                           <span className={`w-1 h-1 rounded-full ${theme === 'dark' ? 'bg-gray-700' : 'bg-gray-300'}`}></span>
                           <span className={`text-[10px] font-black uppercase tracking-[0.3em] ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>{book?.title}</span>
                         </div>
-                        <h2 className={`text-3xl font-black uppercase tracking-tight ${s.text}`}>Book Summary</h2>
+                        <h2 className={`text-3xl font-black uppercase tracking-tight ${s.text}`}>AI Summary</h2>
                       </div>
                     </div>
 
@@ -790,7 +798,7 @@ const BookReader = () => {
                  <div className="flex gap-4">
                     <div className="text-right">
                        <p className={`text-[9px] font-black uppercase tracking-[0.4em] opacity-40 mb-1`}>Next Recommendation</p>
-                       <p className={`text-xs font-bold ${s.text}`}>More in: {book?.category || "Similar Titles"}</p>
+                       <p className={`text-xs font-bold ${s.text}`}>AI Analysis: {book?.category || "Similar Titles"}</p>
                     </div>
                     <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-xl transition-transform hover:rotate-12 ${theme === 'dark' ? 'bg-gray-800 text-gray-400' : 'bg-gray-100 text-gray-500'}`}>
                       🎯
@@ -981,7 +989,7 @@ const BookReader = () => {
                 {aiExplanation ? (
                   <div className="flex flex-col gap-3">
                     <div className="flex justify-between items-center">
-                      <span className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">✨ Explanation</span>
+                      <span className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">✨ AI Explanation</span>
                       <button onClick={() => setAiExplanation(null)} className={`opacity-50 hover:opacity-100 ${theme === 'dark' ? 'text-white' : 'text-black'}`}>✕</button>
                     </div>
                     {aiExplanation.loading ? (
@@ -1041,7 +1049,7 @@ const BookReader = () => {
                               setAiExplanation({ text: res.data.explanation || "This paragraph explores..." });
                             } catch (e) {
                               const snippet = selectionData.text.split(' ').slice(0, 15).join(' ');
-                              setAiExplanation({ text: `Based on context, this text implies: "${snippet}..."` });
+                              setAiExplanation({ text: `Based on context, this text implies: "${snippet}..." (Explanation generated by BookVerse AI)` });
                             }
                           }}
                           className="bg-primary hover:bg-opacity-90 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-md transition-colors flex items-center gap-1.5"
@@ -1102,99 +1110,28 @@ const BookReader = () => {
                     tabIndex={isPreview ? -1 : 0}
                     sandbox="allow-scripts allow-same-origin allow-forms"
                   />
+                ) : pdfMode === "iframe" ? (
+                  /* Case 1: Native PDF/File Viewer */
+                  <iframe
+                    src={bookFileUrl}
+                    title={book?.title}
+                    className={`w-full h-full ${isPreview ? "pointer-events-none select-none" : ""}`}
+                    style={{ border: "none", height: isPreview ? "1200px" : "calc(100vh - 65px)" }}
+                    scrolling={isPreview ? "no" : "auto"}
+                    tabIndex={isPreview ? -1 : 0}
+                    onError={() => setPdfLoadError(true)}
+                  />
                 ) : (
-                  /* Custom Secure PDF Viewer */
-                  <div 
-                    className={`w-full h-full relative flex flex-col items-center bg-[#E5E7EB] dark:bg-[#0F1115] overflow-y-auto ${isPreview ? "pointer-events-none" : ""}`}
-                    style={{ height: isPreview ? "1200px" : "calc(100vh - 65px)" }}
-                    onContextMenu={(e) => e.preventDefault()}
-                  >
-                    {/* PDF Rendering Area */}
-                    <div className="flex-1 flex justify-center p-8 w-full select-none pb-32" style={{ userSelect: 'none' }}>
-                      <Document
-                        file={bookFileUrl}
-                        onLoadSuccess={onPdfDocumentLoadSuccess}
-                        onLoadError={(error) => {
-                          console.error('Failed to load PDF', error);
-                          setPdfLoadError(true);
-                        }}
-                        loading={
-                          <div className="flex flex-col items-center justify-center mt-20">
-                            <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent mb-4"></div>
-                            <p className="text-gray-500 font-bold uppercase tracking-widest text-sm">Loading PDF...</p>
-                          </div>
-                        }
-                      >
-                        <Page 
-                          pageNumber={pdfPageNumber} 
-                          scale={pdfScale}
-                          className="shadow-[0_20px_50px_rgba(0,0,0,0.3)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.8)] rounded-md overflow-hidden transition-transform duration-300 bg-white"
-                          renderTextLayer={false}
-                          renderAnnotationLayer={false}
-                        />
-                      </Document>
-                    </div>
-
-                    {/* Premium Floating Navigation Bar */}
-                    <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 sm:gap-4 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl px-4 sm:px-6 py-3 rounded-full shadow-[0_10px_40px_rgba(0,0,0,0.2)] border border-gray-200/50 dark:border-gray-700/50 text-gray-800 dark:text-gray-200 transition-all hover:shadow-[0_10px_40px_rgba(var(--color-primary),0.2)]">
-                      
-                      {/* Zoom Out */}
-                      <button 
-                        onClick={() => setPdfScale(Math.max(0.5, pdfScale - 0.2))}
-                        className="p-2 sm:p-2.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors group"
-                        title="Zoom Out"
-                      >
-                        <svg className="w-5 h-5 opacity-70 group-hover:opacity-100 group-hover:text-primary transition-all" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
-                        </svg>
-                      </button>
-
-                      <div className="w-px h-8 bg-gray-300 dark:bg-gray-700 mx-1"></div>
-
-                      {/* Previous Page */}
-                      <button 
-                        onClick={() => setPdfPageNumber(Math.max(1, pdfPageNumber - 1))}
-                        disabled={pdfPageNumber <= 1}
-                        className="p-2 sm:p-2.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-30 disabled:hover:bg-transparent transition-colors group"
-                        title="Previous Page"
-                      >
-                        <svg className="w-6 h-6 group-hover:text-primary transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
-                        </svg>
-                      </button>
-                      
-                      {/* Page Counter */}
-                      <div className="flex flex-col items-center min-w-[70px] sm:min-w-[90px] px-1 sm:px-2">
-                        <span className="text-[9px] sm:text-[10px] font-black tracking-[0.2em] uppercase opacity-50 mb-0.5">Page</span>
-                        <span className="text-sm sm:text-base font-bold font-mono tracking-wider">{pdfPageNumber} <span className="opacity-40">/</span> {pdfNumPages || '--'}</span>
-                      </div>
-
-                      {/* Next Page */}
-                      <button 
-                        onClick={() => setPdfPageNumber(Math.min(pdfNumPages || 1, pdfPageNumber + 1))}
-                        disabled={pdfPageNumber >= (pdfNumPages || 1)}
-                        className="p-2 sm:p-2.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-30 disabled:hover:bg-transparent transition-colors group"
-                        title="Next Page"
-                      >
-                        <svg className="w-6 h-6 group-hover:text-primary transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
-                        </svg>
-                      </button>
-
-                      <div className="w-px h-8 bg-gray-300 dark:bg-gray-700 mx-1"></div>
-
-                      {/* Zoom In */}
-                      <button 
-                        onClick={() => setPdfScale(Math.min(3.0, pdfScale + 0.2))}
-                        className="p-2 sm:p-2.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors group"
-                        title="Zoom In"
-                      >
-                        <svg className="w-5 h-5 opacity-70 group-hover:opacity-100 group-hover:text-primary transition-all" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
-                        </svg>
-                      </button>
-                    </div>
-                  </div>
+                  /* Case 2: Google PDF Viewer */
+                  <iframe
+                    src={googleViewerUrl}
+                    title={book?.title}
+                    className={`w-full h-full ${isPreview ? "pointer-events-none select-none" : ""}`}
+                    style={{ border: "none", height: isPreview ? "1200px" : "calc(100vh - 65px)" }}
+                    scrolling={isPreview ? "no" : "auto"}
+                    tabIndex={isPreview ? -1 : 0}
+                    onError={() => setPdfLoadError(true)}
+                  />
                 )}
               </div>
             )}
